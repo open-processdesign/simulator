@@ -1,0 +1,21 @@
+[project]
+name = "opd-engine"
+version = "0.0.1"
+description = "Open Process Design engine layer: OPD format and engine adapters"
+license = { text = "GPL-3.0-or-later" }
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "jsonschema>=4.21"]
+reference = ["thermo>=0.4", "chemicals>=1.2"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["opd_engine*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

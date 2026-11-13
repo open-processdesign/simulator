@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/open-processdesign/simulator/schema/flowsheet.schema.json",
+  "title": "OPD flowsheet",
+  "description": "Engine-independent flowsheet document (v0.1). All quantities in SI.",
+  "type": "object",
+  "required": ["format", "version", "name", "components", "thermo", "units", "streams"],
+  "additionalProperties": false,
+  "properties": {
+    "format": { "const": "opd-flowsheet" },
+    "version": { "const": "0.1" },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "cas"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "name": { "type": "string" },
+          "cas": { "type": "string", "pattern": "^[0-9]{2,7}-[0-9]{2}-[0-9]$" },
+          "formula": { "type": "string" }
+        }
+      }
+    },
+    "thermo": {
+      "type": "object",
+      "required": ["package"],
+      "additionalProperties": false,
+      "properties": {
+        "package": { "enum": ["IDEAL", "PR", "SRK", "NRTL", "UNIQUAC", "UNIFAC"] },
+        "binary_parameters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["i", "j", "name", "value", "source"],
+            "additionalProperties": false,
+            "properties": {
+              "i": { "$ref": "#/$defs/id" },
+              "j": { "$ref": "#/$defs/id" },
+              "name": { "type": "string", "description": "e.g. kij, tau_ij, alpha_ij" },
+              "value": { "type": "number" },
+              "source": { "enum": ["database", "user", "literature", "regression", "default"] },
+              "reference": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "type": {
+            "enum": ["feed", "product", "mixer", "splitter", "flash", "heater", "heat_exchanger",
+                     "pump", "compressor", "valve", "conversion_reactor", "shortcut_column"]
+          },
+          "label": { "type": "string" },
+          "specs": { "type": "object", "additionalProperties": { "$ref": "#/$defs/quantity" } },
+          "options": { "type": "object" }
+        }
+      }
+    },
+    "streams": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "from", "to"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "label": { "type": "string" },
+          "from": { "$ref": "#/$defs/port" },
+          "to": { "$ref": "#/$defs/port" },
+          "state": { "$ref": "#/$defs/state" }
+        }
+      }
+    },
+    "results": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "engine": { "type": "string" },
+        "engine_version": { "type": "string" },
+        "converged": { "type": "boolean" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "streams": { "type": "object", "additionalProperties": { "$ref": "#/$defs/state" } },
+        "units": {
+          "type": "object",
+          "additionalProperties": { "type": "object", "additionalProperties": { "$ref": "#/$defs/quantity" } }
+        }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "description": "Canvas positions only; never process data.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["x", "y"],
+        "properties": { "x": { "type": "number" }, "y": { "type": "number" } }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$" },
+    "port": {
+      "type": "object",
+      "required": ["unit", "port"],
+      "additionalProperties": false,
+      "properties": { "unit": { "$ref": "#/$defs/id" }, "port": { "type": "string" } }
+    },
+    "quantity": {
+      "type": "object",
+      "required": ["value", "unit"],
+      "additionalProperties": false,
+      "properties": { "value": { "type": "number" }, "unit": { "type": "string" } }
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "temperature": { "$ref": "#/$defs/quantity" },
+        "pressure": { "$ref": "#/$defs/quantity" },
+        "molar_flow": { "$ref": "#/$defs/quantity" },
+        "vapor_fraction": { "$ref": "#/$defs/quantity" },
+        "mole_fractions": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 } }
+      }
+    }
+  }
+}

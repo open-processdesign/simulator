@@ -1,0 +1,42 @@
+{
+  "format": "opd-flowsheet",
+  "version": "0.1",
+  "name": "Benzene-toluene flash drum",
+  "description": "Smallest useful case: one feed, one isothermal flash, two products.",
+  "components": [
+    { "id": "benzene", "name": "Benzene", "cas": "71-43-2", "formula": "C6H6" },
+    { "id": "toluene", "name": "Toluene", "cas": "108-88-3", "formula": "C7H8" }
+  ],
+  "thermo": { "package": "PR" },
+  "units": [
+    { "id": "FEED", "type": "feed", "label": "Feed" },
+    {
+      "id": "F-101", "type": "flash", "label": "Flash drum",
+      "specs": {
+        "temperature": { "value": 368.15, "unit": "K" },
+        "pressure": { "value": 101325, "unit": "Pa" }
+      }
+    },
+    { "id": "VAP", "type": "product", "label": "Vapour product" },
+    { "id": "LIQ", "type": "product", "label": "Liquid product" }
+  ],
+  "streams": [
+    {
+      "id": "S1", "from": { "unit": "FEED", "port": "out" }, "to": { "unit": "F-101", "port": "in" },
+      "state": {
+        "temperature": { "value": 350.0, "unit": "K" },
+        "pressure": { "value": 101325, "unit": "Pa" },
+        "molar_flow": { "value": 100.0, "unit": "mol/s" },
+        "mole_fractions": { "benzene": 0.5, "toluene": 0.5 }
+      }
+    },
+    { "id": "S2", "from": { "unit": "F-101", "port": "vapor" }, "to": { "unit": "VAP", "port": "in" } },
+    { "id": "S3", "from": { "unit": "F-101", "port": "liquid" }, "to": { "unit": "LIQ", "port": "in" } }
+  ],
+  "layout": {
+    "FEED": { "x": 0, "y": 120 },
+    "F-101": { "x": 220, "y": 100 },
+    "VAP": { "x": 440, "y": 20 },
+    "LIQ": { "x": 440, "y": 220 }
+  }
+}

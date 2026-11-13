@@ -1,0 +1,28 @@
+{
+  "app": {
+    "name": "Open Process Design",
+    "disclaimer": "Yalnızca eğitim ve ön tasarım amaçlıdır. Sonuçları kullanmadan önce doğrulayın."
+  },
+  "steps": {
+    "components": "Bileşenler",
+    "thermo": "Termodinamik",
+    "flowsheet": "Akış şeması",
+    "run": "Çalıştır",
+    "results": "Sonuçlar"
+  },
+  "actions": { "run": "Çalıştır", "save": "Kaydet", "open": "Aç", "add": "Ekle", "remove": "Kaldır" },
+  "status": { "solved": "Hesaplandı", "missing": "Eksik giriş", "error": "Hata" },
+  "units": {
+    "feed": "Besleme", "product": "Ürün", "mixer": "Karıştırıcı", "splitter": "Ayırıcı", "flash": "Flaş",
+    "heater": "Isıtıcı / Soğutucu", "heat_exchanger": "Isı değiştirici", "pump": "Pompa",
+    "compressor": "Kompresör", "valve": "Vana", "conversion_reactor": "Dönüşüm reaktörü",
+    "shortcut_column": "Kısa yol kolonu"
+  },
+  "issues": {
+    "engine_unavailable": "Hesaplama motoru ({{engine}}) şu anda kullanılamıyor.",
+    "missing_spec": "{{target}}: {{spec}} eksik.",
+    "unconnected_port": "{{target}}: \"{{port}}\" bağlantı noktası bağlı değil.",
+    "fractions_not_normalized": "{{target}}: mol kesirlerinin toplamı 1 değil, {{sum}}.",
+    "missing_binary_parameter": "{{i}}–{{j}} için ikili parametre yok; k_ij = 0 kullanılıyor."
+  }
+}

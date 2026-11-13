@@ -1,0 +1,86 @@
+/* Open Process Design — design tokens (source of truth: docs/DESIGN_SYSTEM.md) */
+:root {
+  /* Surfaces — warm, low contrast */
+  --opd-bg: #FAF8F4;          /* app background */
+  --opd-surface: #FFFFFF;     /* panels, cards */
+  --opd-surface-muted: #F3F0EA; /* side panel, table header */
+  --opd-border: #E6E1D8;
+  --opd-border-strong: #D4CEC3;
+
+  /* Text — soft black, never #000 */
+  --opd-text: #1F1D1A;
+  --opd-text-muted: #6B655C;
+  --opd-text-subtle: #9A938A;
+
+  /* Accent — the only brand colour */
+  --opd-accent: #D9733B;
+  --opd-accent-hover: #C4632E;
+  --opd-accent-soft: #F8E6DA;  /* selected rows, focus halo */
+  --opd-on-accent: #FFFFFF;
+
+  /* Status (dots, badges, messages) */
+  --opd-ok: #4E8A5E;
+  --opd-warn: #C9922E;
+  --opd-error: #C0503F;
+  --opd-info: #4A7BA8;
+
+  /* Stream phases (canvas lines, table tags) */
+  --opd-phase-vapor: #7FA7C9;
+  --opd-phase-liquid: #4A7BA8;
+  --opd-phase-mixed: #8C7BB0;
+  --opd-phase-solid: #8B7D6B;
+
+  /* Unit categories (palette icons only) */
+  --opd-cat-mixing: #7A8B99;
+  --opd-cat-separation: #5E8C82;
+  --opd-cat-heat: #C97B4A;
+  --opd-cat-pressure: #6F7FA8;
+  --opd-cat-reaction: #A8697A;
+
+  /* Typography */
+  --opd-font-ui: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --opd-font-num: "Geist Mono", ui-monospace, "SFMono-Regular", monospace;
+  --opd-font-display: "Source Serif 4", Georgia, serif;
+  --opd-text-xs: 12px;
+  --opd-text-sm: 13px;
+  --opd-text-base: 14px;
+  --opd-text-lg: 16px;
+  --opd-text-xl: 20px;
+  --opd-text-2xl: 26px;
+  --opd-leading: 1.5;
+
+  /* Spacing (4px grid) */
+  --opd-space-1: 4px;
+  --opd-space-2: 8px;
+  --opd-space-3: 12px;
+  --opd-space-4: 16px;
+  --opd-space-6: 24px;
+  --opd-space-8: 32px;
+
+  /* Shape and depth */
+  --opd-radius-sm: 6px;
+  --opd-radius: 10px;
+  --opd-radius-lg: 14px;
+  --opd-shadow: 0 1px 2px rgba(31, 29, 26, 0.06), 0 2px 8px rgba(31, 29, 26, 0.04);
+  --opd-focus: 0 0 0 3px var(--opd-accent-soft);
+
+  /* Layout */
+  --opd-topbar-h: 48px;
+  --opd-sidepanel-w: 340px;
+  --opd-palette-w: 220px;
+}
+
+/* Dark theme (Phase 2; tokens reserved so components never hard-code colours) */
+[data-theme="dark"] {
+  --opd-bg: #1C1B19;
+  --opd-surface: #24221F;
+  --opd-surface-muted: #2B2925;
+  --opd-border: #3A3732;
+  --opd-border-strong: #4A463F;
+  --opd-text: #ECE8E1;
+  --opd-text-muted: #B3ACA2;
+  --opd-text-subtle: #857E74;
+  --opd-accent: #E58A55;
+  --opd-accent-hover: #EF9C6A;
+  --opd-accent-soft: #3D2A1F;
+}

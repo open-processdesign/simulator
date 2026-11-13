@@ -1,0 +1,28 @@
+{
+  "app": {
+    "name": "Open Process Design",
+    "disclaimer": "For education and preliminary design only. Verify results before use."
+  },
+  "steps": {
+    "components": "Components",
+    "thermo": "Thermodynamics",
+    "flowsheet": "Flowsheet",
+    "run": "Run",
+    "results": "Results"
+  },
+  "actions": { "run": "Run", "save": "Save", "open": "Open", "add": "Add", "remove": "Remove" },
+  "status": { "solved": "Solved", "missing": "Missing input", "error": "Error" },
+  "units": {
+    "feed": "Feed", "product": "Product", "mixer": "Mixer", "splitter": "Splitter", "flash": "Flash",
+    "heater": "Heater / Cooler", "heat_exchanger": "Heat exchanger", "pump": "Pump",
+    "compressor": "Compressor", "valve": "Valve", "conversion_reactor": "Conversion reactor",
+    "shortcut_column": "Shortcut column"
+  },
+  "issues": {
+    "engine_unavailable": "The calculation engine ({{engine}}) is not available right now.",
+    "missing_spec": "{{target}}: {{spec}} is missing.",
+    "unconnected_port": "{{target}}: port \"{{port}}\" is not connected.",
+    "fractions_not_normalized": "{{target}}: mole fractions add up to {{sum}}, not 1.",
+    "missing_binary_parameter": "No binary parameter for {{i}}–{{j}}; using k_ij = 0."
+  }
+}

@@ -29,3 +29,9 @@ Why: widest contributor pool, all permissive/compatible licenses, scientific Pyt
 **D009 · 2026-11-13 · Languages: English default, Turkish second.** All strings via `web/locales/*.json`; docs and code in English. — accepted
 
 **D010 · 2026-11-13 · Agent workflow.** One developer agent, 3 nights/week, one task per night, lock rule with `[WIP]` draft PRs, protected `main`. Communication only through the repo. — accepted
+
+**D011 · 2026-11-20 · No server for the December demo; the engine runs in the browser.**
+The team is the maintainer + Claude; no server is available. The demo uses the `reference` adapter (MIT `thermo`) running in the browser via Pyodide, and is hosted for free on GitHub Pages. Own modules (recycle solver, shortcut column, …) are written from textbooks. Supersedes the M1 plan of DWSIM as the demo engine. — accepted (pending T03 spike)
+
+**D012 · 2026-11-20 · DWSIM moves after the demo.**
+DWSIM needs a server. Options, in order: free container hosting tier; a cheap small VPS; a sponsor/university server once the demo exists. The adapter interface (D002) keeps this a drop-in change. If T03 shows Pyodide is not viable, the same free container host runs the FastAPI + reference engine. — accepted

@@ -13,14 +13,14 @@ Repo, agent rules, design system, engine-independent data format, adapter interf
 - Flowsheet canvas with unit palette: Feed, Product, Mixer, Splitter, Flash, Heater/Cooler, Heat exchanger, Pump, Compressor, Valve, Conversion reactor, Shortcut column.
 - Side panel for unit settings; stream table; status dots (solved / missing input / error).
 - Thermo: Peng–Robinson, SRK, NRTL, ideal (Raoult).
-- Engine: DWSIM through the adapter, running as a separate service. Fallback for the demo if headless DWSIM is not ready: in-house `reference` adapter (MIT `thermo`) for flash-based units.
-- Recycle loops solved by the engine.
+- Engine: in-house `reference` adapter (MIT `thermo`) running in the browser (Pyodide). No server needed (D011). DWSIM follows after the demo (D012).
+- Recycle loops: own tear-stream solver (Wegstein / direct substitution).
 - Clear error messages for missing inputs.
 - English + Turkish UI. Save/load OPD JSON files (no accounts yet).
-- Deployed at a public URL with the "education and preliminary design" notice.
+- Deployed on GitHub Pages (free) with the "education and preliminary design" notice.
 
-### Milestone M2 — Rigorous units (Jan 2027)
-Rigorous distillation column, equilibrium/PFR/CSTR reactors, shell-and-tube exchanger, component database search, unit sets (SI / metric / English), result export (CSV).
+### Milestone M2 — Rigorous units + DWSIM (Jan 2027)
+DWSIM engine service on a free/cheap host (T20–T21), shadow-compared with `reference`. Rigorous distillation column, equilibrium/PFR/CSTR reactors, shell-and-tube exchanger, component database search, unit sets (SI / metric / English), result export (CSV).
 
 ### Milestone M3 — Validated release v0.1 (target: 15 Mar 2027)
 - Validation suite: HDA (vs. maintainer's CHEMCAD case), plus 2–3 literature cases (e.g. methanol, cumene).

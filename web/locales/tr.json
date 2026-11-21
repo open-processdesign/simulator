@@ -3,6 +3,15 @@
     "name": "Open Process Design",
     "disclaimer": "Yalnızca eğitim ve ön tasarım amaçlıdır. Sonuçları kullanmadan önce doğrulayın."
   },
+  "shell": { "steps_label": "İş akışı adımları", "language": "Dil", "step_of": "Adım {{current}} / {{total}}" },
+  "languages": { "en": "English", "tr": "Türkçe" },
+  "pages": {
+    "components": { "title": "Bileşenler", "empty": "Prosesinizdeki kimyasal bileşenleri ekleyin. Bileşen arama sonraki bir adımda gelecek." },
+    "thermo": { "title": "Termodinamik", "empty": "Eklediğiniz bileşenler için bir özellik yöntemi seçin (örneğin Peng–Robinson)." },
+    "flowsheet": { "title": "Akış şeması", "empty": "Prosesinizi burada çizin: paletten üniteler, akımlarla bağlanmış." },
+    "run": { "title": "Çalıştır", "empty": "Girdileri kontrol edin ve simülasyonu çalıştırın." },
+    "results": { "title": "Sonuçlar", "empty": "Çalıştırmadan sonra akım tabloları ve ünite sonuçları burada görünür." }
+  },
   "steps": {
     "components": "Bileşenler",
     "thermo": "Termodinamik",

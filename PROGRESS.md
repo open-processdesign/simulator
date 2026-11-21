@@ -169,3 +169,9 @@ Template:
 - Tests: engine 184 passed (new `test_hda_template.py`); web 56 passed.
 - PR: agent/T27-hda-template (stacked on T25).
 - Next: T28 release (demo video, CHANGELOG).
+
+## 2026-11-22 — Claude (manual session) — T28
+- Done: 98 s demo video recorded from the real app and engine (`docs/media/demo.mp4`, scripts in `tools/demo/`), CHANGELOG for 0.1.0, README status/features, versions 0.1.0 (web, engine).
+- Tests: engine 184 passed; web 56 passed.
+- PR: agent/T28-release-v0.1 (stacked on T27).
+- Next / blockers: merge #25–#29, tag `v0.1.0`; HDA CHEMCAD validation (Q8); DWSIM needs a server.

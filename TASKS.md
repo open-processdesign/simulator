@@ -40,7 +40,7 @@ Night sessions until the demo (Mon/Wed/Sat): 21, 23, 25, 28, 30 Nov · 2, 5, 7, 
 | T25 | **Literature validation case 1:** cumene Unit 800 (Turton, CHEMCAD table). | – | review |
 | T26 | **Literature validation case 2:** DME Unit 200 (Turton, CHEMCAD table). | – | review |
 | T27 | **HDA template from the literature base case** (swap to CHEMCAD numbers when available, Q8). | – | review |
-| T28 | **v0.1 release:** demo video, CHANGELOG, final docs check. | T23–T27 | todo |
+| T28 | **v0.1 release:** demo video, CHANGELOG, final docs check. | T23–T27 | review — tag `v0.1.0` after merge |
 
 ## After the demo — DWSIM engine (needs a host, see D012; IDs T90+ so they never clash with new tasks)
 | ID | Task | Depends | Status |

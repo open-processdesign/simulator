@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TopBar } from "@/components/TopBar";
 import { StepPage } from "@/pages/StepPage";
+import { ComponentsPage } from "@/pages/ComponentsPage";
+import { ThermoPage } from "@/pages/ThermoPage";
 import { stepFromHash, type Step } from "@/steps";
 
 export function App() {
@@ -18,7 +20,7 @@ export function App() {
     <div className="flex h-full flex-col">
       <TopBar step={step} onStepChange={setStep} />
       <main className="flex-1 overflow-auto">
-        <StepPage step={step} />
+        {step === "components" ? <ComponentsPage /> : step === "thermo" ? <ThermoPage /> : <StepPage step={step} />}
       </main>
       <footer className="border-t border-border bg-surface-muted px-4 py-1.5 text-xs text-muted">
         {t("app.disclaimer")}

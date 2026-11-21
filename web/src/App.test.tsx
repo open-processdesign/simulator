@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithApp } from "@/test/render";
 import userEvent from "@testing-library/user-event";
 import i18n from "@/i18n";
 import en from "@locales/en.json";
@@ -19,7 +20,7 @@ describe("app shell", () => {
   });
 
   it("shows the five workflow steps with the first one current", () => {
-    render(<App />);
+    renderWithApp(<App />);
     const nav = screen.getByRole("navigation", { name: "Workflow steps" });
     const links = nav.querySelectorAll("a");
     expect([...links].map((a) => a.textContent)).toEqual([
@@ -35,7 +36,7 @@ describe("app shell", () => {
 
   it("navigates between steps", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    renderWithApp(<App />);
     await user.click(screen.getByRole("link", { name: /Flowsheet/ }));
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Flowsheet");
     expect(screen.getByRole("link", { current: "step" })).toHaveTextContent("Flowsheet");
@@ -43,8 +44,8 @@ describe("app shell", () => {
 
   it("switches the interface to Turkish", async () => {
     const user = userEvent.setup();
-    render(<App />);
-    await user.selectOptions(screen.getByRole("combobox"), "tr");
+    renderWithApp(<App />);
+    await user.selectOptions(screen.getByRole("combobox", { name: "Language" }), "tr");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Bileşenler");
     expect(screen.getByRole("navigation", { name: "İş akışı adımları" })).toBeInTheDocument();
     expect(document.documentElement.lang).toBe("tr");

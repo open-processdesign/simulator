@@ -45,3 +45,9 @@ Template:
 - Result: D014 — browser engine is viable (≈ 13 s boot + ≈ 67 MB first download).
 - PR: #5 (based on PR #4).
 - Next: T05 (Components + Thermodynamics pages) or T06 (canvas).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T05
+- Done: Components page (search by name/synonym/CAS/formula over a 1347-component index built from `chemicals`; add/remove; molar mass and Tb shown). Thermodynamics page (IDEAL / PR / SRK; NRTL shown as "coming later"; k_ij table with source badges database / user / missing → 0, editable with decimal comma, reset to database). OPD document reducer + provider; engine starts at app open with a status chip in the top bar; `runtime.binary_parameters` in the engine and worker protocol. EN/TR strings.
+- Tests: engine 50 passed; web 20 passed; end-to-end in Chrome with the real engine (methane–CO2 k_ij 0.0978 from ChemSep shown as Database, benzene–toluene as Missing).
+- PR: #6 (based on PR #5).
+- Next: T06 (flowsheet canvas).

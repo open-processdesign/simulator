@@ -39,9 +39,14 @@ const ready: Promise<Engine> = (async () => {
 ready.catch((error: unknown) => post({ type: "failed", error: String(error) }));
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
-  const { id, doc } = event.data;
+  const request = event.data;
+  const { id, doc } = request;
   try {
     const engine = await ready;
+    if (request.type === "binary_parameters") {
+      post({ id, type: "binary_parameters", rows: engine.binaryParameters(doc) });
+      return;
+    }
     const start = performance.now();
     const result = engine.simulate(doc);
     post({ id, type: "result", result, ms: Math.round(performance.now() - start) });

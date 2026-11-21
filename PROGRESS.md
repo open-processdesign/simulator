@@ -128,3 +128,8 @@ Template:
 - Done: CONTRIBUTING.md, CODE_OF_CONDUCT.md (own text), docs/USER_GUIDE.md + USER_GUIDE.tr.md, docs/VALIDATION.md (all model checks with reference, quantity, tolerance, test; M3 next steps), README links and unit list.
 - PR: #20 (based on PR #19).
 - Maintainer action for M3: export the CHEMCAD HDA stream table (see VALIDATION.md "Next").
+
+## 2026-11-21 — Claude (maintainer-requested session) — T20
+- Done: heat-exchanger rating mode (`ua`, or `u_overall` + `area`): duty solved from Q = UA·LMTD with Brent, bounded by the no-cross maximum duty; UA option in the side panel.
+- Tests: engine 117 passed (rating with the design's UA reproduces the design outlet and duty; doubling the area raises the duty). Web 51 passed.
+- PR: #21 (based on PR #20).

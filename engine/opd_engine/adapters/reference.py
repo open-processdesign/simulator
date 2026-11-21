@@ -33,7 +33,8 @@ pump       in, out                pressure *or* pressure_increase; optional effi
 compressor in, out                pressure *or* pressure_increase; optional isentropic
                                   efficiency (default 0.75)
 heat_      hot_in, hot_out,       exactly one of hot_outlet_temperature,
-exchanger  cold_in, cold_out      cold_outlet_temperature, duty; optional
+exchanger  cold_in, cold_out      cold_outlet_temperature, duty, ua (W/K) or
+                                  u_overall (W/m²K) + area (m²) for rating; optional
                                   hot_pressure_drop, cold_pressure_drop; counter-current
 conversion in, out                options.reactions = [{stoichiometry: {component: ν},
 _reactor                          key: component, conversion: 0…1}, …] applied in order;
@@ -119,6 +120,9 @@ _SI = {
     "reflux_ratio": {"1", "-", ""},
     "distillate_rate": {"mol/s"},
     "volume": {"m3", "m³"},
+    "ua": {"W/K"},
+    "u_overall": {"W/m2/K", "W/(m2·K)", "W/m²K"},
+    "area": {"m2", "m²"},
 }
 _FRACTION_UNITS = {"1", "-", ""}
 
@@ -731,8 +735,16 @@ def _check_unit(u: Unit, ins: dict[str, str], outs: dict[str, str],
             need(p, outs)
         no_extra({"hot_in", "cold_in"}, ins)
         no_extra({"hot_out", "cold_out"}, outs)
-        issues += _one_of(u, ("hot_outlet_temperature", "cold_outlet_temperature", "duty"),
-                          required=True)
+        given = [n for n in ("hot_outlet_temperature", "cold_outlet_temperature", "duty", "ua")
+                 if n in u.specs]
+        if "u_overall" in u.specs or "area" in u.specs:
+            if not ("u_overall" in u.specs and "area" in u.specs):
+                issues.append(_missing("unit", u.id, "area" if "u_overall" in u.specs else "u_overall"))
+            given.append("u_overall · area")
+        if len(given) > 1:
+            issues.append(_error("conflicting_specs", "unit", u.id, target=u.id, specs=given))
+        elif not given:
+            issues.append(_missing("unit", u.id, "hot_outlet_temperature / cold_outlet_temperature / duty / ua"))
     elif t == "conversion_reactor":
         need("in", ins)
         need("out", outs)
@@ -1105,10 +1117,42 @@ def _solve_heat_exchanger(u, inlets, outs, th, fs):
         c_out = _scaled(th.flash(cold.zs, T=u.specs["cold_outlet_temperature"].value, P=Pc), cold.F)  # type: ignore[arg-type]
         Q = cold.F * (c_out.H - cold.H)  # type: ignore[operator]
         h_out = _scaled(th.flash(hot.zs, P=Ph, H=hot.H - Q / hot.F), hot.F)  # type: ignore[arg-type, operator]
-    else:
+    elif "duty" in u.specs:
         Q = u.specs["duty"].value
         h_out = _scaled(th.flash(hot.zs, P=Ph, H=hot.H - Q / hot.F), hot.F)  # type: ignore[arg-type, operator]
         c_out = _scaled(th.flash(cold.zs, P=Pc, H=cold.H + Q / cold.F), cold.F)  # type: ignore[arg-type, operator]
+    else:
+        # Rating: given UA (or U·A), find Q with Q = UA·LMTD (counter-current, end temperatures).
+        UA = (u.specs["ua"].value if "ua" in u.specs
+              else u.specs["u_overall"].value * u.specs["area"].value)
+        if hot.T <= cold.T:
+            raise _InputError(_error("temperature_cross", "unit", u.id, target=u.id,
+                                     hot_end=round(hot.T - cold.T, 2), cold_end=round(hot.T - cold.T, 2)))
+
+        def outlets(Q: float) -> tuple[_State, _State]:
+            ho = _scaled(th.flash(hot.zs, P=Ph, H=hot.H - Q / hot.F), hot.F)  # type: ignore[arg-type, operator]
+            co = _scaled(th.flash(cold.zs, P=Pc, H=cold.H + Q / cold.F), cold.F)  # type: ignore[arg-type, operator]
+            return ho, co
+
+        def q_max() -> float:
+            # Largest duty without a temperature cross: neither stream passes the other's inlet T.
+            hot_lim = hot.F * (hot.H - th.flash(hot.zs, T=cold.T, P=Ph).H)  # type: ignore[arg-type, operator]
+            cold_lim = cold.F * (th.flash(cold.zs, T=hot.T, P=Pc).H - cold.H)  # type: ignore[arg-type, operator]
+            return min(hot_lim, cold_lim)
+
+        def residual(Q: float) -> float:
+            ho, co = outlets(Q)
+            a, b = hot.T - co.T, ho.T - cold.T
+            if a <= 0 or b <= 0:
+                return Q  # positive: too much duty
+            lmtd = (a - b) / math.log(a / b) if abs(a - b) > 1e-9 * max(a, b) else a
+            return Q - UA * lmtd
+
+        from scipy.optimize import brentq
+
+        hi = q_max() * (1 - 1e-9)
+        Q = brentq(residual, hi * 1e-12, hi, xtol=1e-9 * hi) if residual(hi) > 0 else hi
+        h_out, c_out = outlets(Q)
     dT_hot_end = hot.T - c_out.T  # hot inlet against cold outlet
     dT_cold_end = h_out.T - cold.T  # hot outlet against cold inlet
     results = {

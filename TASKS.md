@@ -32,6 +32,7 @@ Night sessions until the demo (Mon/Wed/Sat): 21, 23, 25, 28, 30 Nov · 2, 5, 7, 
 | T17 | **Kinetic reactors (M2).** CSTR and PFR with power-law kinetics (k₀, Eₐ, orders; gas or liquid concentration basis); isothermal or given duty (adiabatic); PFR length profile; checks vs. analytic first-order conversions and energy balance. | T09, T16 | review (PR #18) |
 | T18 | **Equilibrium reactor (M2).** Gas-phase chemical equilibrium with K(T) from formation data (+ fugacity coefficients); one or more reactions; isothermal or adiabatic; checks vs. WGS correlation and equilibrium conditions. | T17 | review (PR #19) |
 | T19 | **Docs (M3 start).** CONTRIBUTING, code of conduct, user guide (EN/TR), docs/VALIDATION.md listing every model check with reference and tolerance; README updated. | – | review (PR #20) |
+| T20 | **Heat-exchanger rating.** Given UA (or U and area), the exchanger finds its duty from Q = UA·LMTD (counter-current) instead of a fixed outlet; UA option in the side panel. | T09 | review (PR #21) |
 
 ## After the demo — DWSIM engine (needs a host, see D012)
 | ID | Task | Depends | Status |

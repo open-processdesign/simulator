@@ -1,9 +1,10 @@
-import type { BinaryParameterRow, EngineResult, Timing } from "./bootstrap";
+import type { BinaryParameterRow, EngineIssue, EngineResult, Timing } from "./bootstrap";
 
 /** Messages from the page to the engine worker. */
 export type WorkerRequest =
   | { id: number; type: "simulate"; doc: unknown }
-  | { id: number; type: "binary_parameters"; doc: unknown };
+  | { id: number; type: "binary_parameters"; doc: unknown }
+  | { id: number; type: "validate"; doc: unknown };
 
 /** Messages from the engine worker to the page. */
 export type WorkerResponse =
@@ -12,4 +13,5 @@ export type WorkerResponse =
   | { type: "failed"; error: string }
   | { id: number; type: "result"; result: EngineResult; ms: number }
   | { id: number; type: "binary_parameters"; rows: BinaryParameterRow[] }
+  | { id: number; type: "validate"; issues: EngineIssue[] }
   | { id: number; type: "error"; error: string };

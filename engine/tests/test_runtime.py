@@ -63,3 +63,11 @@ def test_component_index_entries_load_in_the_engine():
     for entry in random.Random(4).sample(index, 15):
         constants, _ = ChemicalConstantsPackage.from_IDs([entry["cas"]])
         assert constants.Tcs[0] > 0 and constants.Pcs[0] > 0
+
+
+def test_validate_reports_without_solving():
+    doc = json.loads(EXAMPLE.read_text(encoding="utf-8"))
+    assert runtime.validate(doc) == []
+    del doc["streams"][0]["state"]["pressure"]
+    issues = runtime.validate(doc)
+    assert [(i["code"], i["target"]["id"]) for i in issues] == [("missing_spec", "S1")]

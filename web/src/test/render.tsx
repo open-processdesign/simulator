@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { render } from "@testing-library/react";
 import { EngineProvider } from "@/engine/EngineProvider";
 import type { EngineClient } from "@/engine/client";
-import type { BinaryParameterRow } from "@/engine/bootstrap";
+import type { BinaryParameterRow, EngineIssue } from "@/engine/bootstrap";
 import type { Flowsheet } from "@/opd/types";
 import { FlowsheetProvider } from "@/state/FlowsheetProvider";
 
@@ -10,8 +10,9 @@ import { FlowsheetProvider } from "@/state/FlowsheetProvider";
 const FAKE_DB: Record<string, number> = { "74-82-8|124-38-9": 0.0978 };
 
 /** A stand-in for the Web Worker engine with the same contract (no Pyodide in jsdom). */
-export function fakeEngine(): EngineClient {
+export function fakeEngine(validate: (doc: Flowsheet) => EngineIssue[] = () => []): EngineClient {
   return {
+    validate: async (doc) => validate(doc as Flowsheet),
     ready: Promise.resolve({ version: "fake", timings: [] }),
     onProgress: () => {},
     terminate: () => {},
@@ -38,9 +39,9 @@ export function fakeEngine(): EngineClient {
   };
 }
 
-export function renderWithApp(ui: ReactNode, initial?: Flowsheet) {
+export function renderWithApp(ui: ReactNode, initial?: Flowsheet, engine: () => EngineClient = fakeEngine) {
   return render(
-    <EngineProvider create={fakeEngine}>
+    <EngineProvider create={engine}>
       <FlowsheetProvider initial={initial}>{ui}</FlowsheetProvider>
     </EngineProvider>,
   );

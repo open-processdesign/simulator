@@ -73,3 +73,26 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* React Flow themed with OPD tokens */
+.react-flow {
+  --xy-background-color: var(--opd-bg);
+  --xy-edge-stroke: var(--opd-text-muted);
+  --xy-edge-stroke-selected: var(--opd-accent);
+  --xy-connectionline-stroke: var(--opd-accent);
+  --xy-handle-border-color: var(--opd-border-strong);
+  --xy-controls-button-background-color: var(--opd-surface);
+  --xy-controls-button-border-color: var(--opd-border);
+  --xy-edge-label-background-color: var(--opd-bg);
+  --xy-edge-label-color: var(--opd-text-muted);
+  font-family: var(--opd-font-ui);
+}
+.react-flow__edge-text {
+  font-family: var(--opd-font-num);
+  font-size: 11px;
+}
+.react-flow__node-unit {
+  padding: 0;
+  border: none;
+  background: transparent;
+}

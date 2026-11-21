@@ -44,6 +44,8 @@ export interface Engine {
   simulate(doc: unknown): EngineResult;
   /** k_ij per component pair and its source (reads only `components` and `thermo`). */
   binaryParameters(doc: unknown): BinaryParameterRow[];
+  /** Input checks only, no calculation. */
+  validate(doc: unknown): EngineIssue[];
   timings: Timing[];
   version: string;
 }
@@ -96,6 +98,7 @@ export async function bootEngine(pyodide: PyodideAPI, options: BootOptions): Pro
     return {
       simulate: runtime.simulate_json as (doc: string) => string,
       binaryParameters: runtime.binary_parameters_json as (doc: string) => string,
+      validate: runtime.validate_json as (doc: string) => string,
     };
   });
   if (options.warmup !== undefined) {
@@ -110,6 +113,9 @@ export async function bootEngine(pyodide: PyodideAPI, options: BootOptions): Pro
     version,
     simulate(doc: unknown): EngineResult {
       return JSON.parse(api.simulate(JSON.stringify(doc))) as EngineResult;
+    },
+    validate(doc: unknown): EngineIssue[] {
+      return JSON.parse(api.validate(JSON.stringify(doc))) as EngineIssue[];
     },
     binaryParameters(doc: unknown): BinaryParameterRow[] {
       return JSON.parse(api.binaryParameters(JSON.stringify(doc))) as BinaryParameterRow[];

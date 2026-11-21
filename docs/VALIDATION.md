@@ -37,6 +37,9 @@ the HDA process against the maintainer's CHEMCAD case, plus two or three literat
 | CSTR / PFR | First-order X = kτ/(1+kτ), X = 1 − e^(−kτ); second-order CSTR | conversion | 1e-6 rel. | `test_kinetic_reactors.py` |
 | Adiabatic PFR | Same outlet T as an adiabatic conversion reactor at equal conversion | T | 1e-3 K | `test_adiabatic_pfr…` |
 | Equilibrium reactor | K condition, element balances, Le Chatelier | composition | 1e-7 rel. | `test_equilibrium_reactor.py` |
+| Liquid equilibrium, ideal A ⇌ B | x_B/x_A = K_a; formation route K_a = K_ig·Psat_A/Psat_B | ratio | 1e-6 rel. | `test_liquid_equilibrium.py::test_ideal_isomerisation…` |
+| MTBE K_a(T) from formation data | ln K = 4703/T − 10.3 (Izquierdo et al., via Badia et al. 2016); ΔrH° = −37 ± 10 kJ/mol | ln K, ΔrH° | 0.45, 10 kJ/mol | `test_mtbe_k_from_formation_data_vs_literature` |
+| MTBE, NRTL liquid | Π(x γ)^ν = K_a with γ from the model | K_a | 1e-6 rel. | `test_nrtl_outlet_satisfies_activity_mass_action` |
 | Recycle loops | Analytic R = rF/(1 − r); once-through duties | flows, duties | 1e-6 rel. | `test_recycle.py` |
 
 ## Browser engine

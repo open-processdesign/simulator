@@ -146,3 +146,8 @@ Template:
 - PR: #24 (agent/T22-zoned-hx).
 - Next / blockers: liquid-phase equilibrium reactor; HDA vs CHEMCAD waits for the CHEMCAD stream table; DWSIM waits for a server.
 
+## 2026-11-21 — Claude (manual session) — T23
+- Done: liquid-phase equilibrium reactor (activities vs pure liquid, all packages), user ln K correlation per reaction, phase-mismatch warning, UI (phase, K source, a/b/c), example `mtbe-liquid-equilibrium`, UNIQUAC zero-fraction fix, D029, VALIDATION rows, user guide.
+- Tests: engine 148 passed (new `test_liquid_equilibrium.py`); web 55 passed.
+- PR: agent/T23-liquid-equilibrium.
+- Next: T24 shell-and-tube geometry.

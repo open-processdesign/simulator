@@ -404,16 +404,28 @@ function KineticsEditor({ unit }: { unit: Unit }) {
   );
 }
 
+type EqReaction = { stoichiometry: Record<string, number>; ln_k?: { a?: number; b?: number; c?: number } };
+
 function EquilibriumEditor({ unit }: { unit: Unit }) {
   const { t } = useTranslation();
   const { doc, dispatch } = useFlowsheet();
-  const reactions = (unit.options?.reactions as { stoichiometry: Record<string, number> }[] | undefined) ?? [];
-  const save = (next: { stoichiometry: Record<string, number> }[]) => dispatch({ type: "set_options", id: unit.id, options: { reactions: next } });
+  const reactions = (unit.options?.reactions as EqReaction[] | undefined) ?? [];
+  const phase = (unit.options?.phase as string | undefined) ?? "gas";
+  const save = (next: EqReaction[]) => dispatch({ type: "set_options", id: unit.id, options: { reactions: next } });
+  const update = (k: number, r: EqReaction) => save(reactions.map((x, i) => (i === k ? r : x)));
   if (doc.components.length === 0) return <p className="text-sm text-muted">{t("flowsheet.no_components")}</p>;
   return (
     <fieldset className="flex flex-col gap-3 rounded-md border border-border bg-surface p-3">
       <legend className="px-1 text-sm font-semibold">{t("flowsheet.specs.reactions")}</legend>
-      <p className="text-xs text-muted">{t("flowsheet.equilibrium_hint")}</p>
+      <label className="flex items-center justify-between gap-2 text-sm text-muted">
+        {t("flowsheet.phase")}
+        <select value={phase} onChange={(e) => dispatch({ type: "set_options", id: unit.id, options: { phase: e.target.value } })}
+          className="h-7 w-[11.5rem] rounded-sm border border-border-strong bg-surface px-2 text-sm text-text">
+          <option value="gas">{t("flowsheet.phase_gas")}</option>
+          <option value="liquid">{t("flowsheet.phase_liquid")}</option>
+        </select>
+      </label>
+      <p className="text-xs text-muted">{t(phase === "liquid" ? "flowsheet.equilibrium_hint_liquid" : "flowsheet.equilibrium_hint")}</p>
       {reactions.map((r, k) => (
         <div key={k} className="flex flex-col gap-1.5 border-t border-border pt-3">
           <div className="flex items-center justify-between">
@@ -429,9 +441,36 @@ function EquilibriumEditor({ unit }: { unit: Unit }) {
                 const st = { ...r.stoichiometry };
                 if (v === null || v === 0) delete st[c.id];
                 else st[c.id] = v;
-                save(reactions.map((x, i) => (i === k ? { stoichiometry: st } : x)));
+                update(k, { ...r, stoichiometry: st });
               }} />
           ))}
+          <label className="flex items-center justify-between gap-2 text-sm text-muted">
+            {t("flowsheet.k_source")}
+            <select value={r.ln_k ? "correlation" : "formation"}
+              onChange={(e) => {
+                const next: EqReaction = { stoichiometry: r.stoichiometry };
+                if (e.target.value === "correlation") next.ln_k = { a: 0 };
+                update(k, next);
+              }}
+              className="h-7 w-[11.5rem] rounded-sm border border-border-strong bg-surface px-2 text-sm text-text">
+              <option value="formation">{t("flowsheet.k_formation")}</option>
+              <option value="correlation">{t("flowsheet.k_correlation")}</option>
+            </select>
+          </label>
+          {r.ln_k && (
+            <>
+              <p className="text-xs text-muted">{t("flowsheet.k_correlation_hint")}</p>
+              {(["a", "b", "c"] as const).map((name) => (
+                <QuantityField key={name} label={t(`flowsheet.k_coef_${name}`)} name="number" value={r.ln_k?.[name]}
+                  onCommit={(v) => {
+                    const lnk = { ...r.ln_k };
+                    if (v === null || v === 0) delete lnk[name];
+                    else lnk[name] = v;
+                    update(k, { ...r, ln_k: Object.keys(lnk).length ? lnk : { a: 0 } });
+                  }} />
+              ))}
+            </>
+          )}
         </div>
       ))}
       <Button variant="secondary" size="sm" onClick={() => save([...reactions, { stoichiometry: {} }])}>

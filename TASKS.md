@@ -29,6 +29,7 @@ Night sessions until the demo (Mon/Wed/Sat): 21, 23, 25, 28, 30 Nov · 2, 5, 7, 
 | T14 | **CSV export.** Stream table and unit results as a CSV file in the current unit set; Excel-friendly in both languages (UTF-8 BOM; Turkish uses `;` and decimal comma). | T13 | review (PR #15) |
 | T15 | **Rigorous distillation column (M2).** Equilibrium-stage column (MESH) by the bubble-point method with θ-correction: total condenser, partial reboiler, specs N, feed stage, R, D; any property package; checks vs. MESH residuals and FUG. | T09, T12 | review (PR #16) |
 | T16 | **Column stage profiles.** Optional `results.profiles` (axis + series) in the OPD format; the rigorous column stores T, L, V, x, y per stage; Results step shows temperature and composition charts with hover and a table view. | T15 | review (PR #17) |
+| T17 | **Kinetic reactors (M2).** CSTR and PFR with power-law kinetics (k₀, Eₐ, orders; gas or liquid concentration basis); isothermal or given duty (adiabatic); PFR length profile; checks vs. analytic first-order conversions and energy balance. | T09, T16 | wip |
 
 ## After the demo — DWSIM engine (needs a host, see D012)
 | ID | Task | Depends | Status |

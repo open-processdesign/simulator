@@ -81,3 +81,10 @@ Template:
 - Tests: web 41 passed (parsing, file names incl. Turkish letters, draft, gallery, open/save via the menu, bad file message). End-to-end in Chrome: HDA example opened from the menu, run in < 1 s (recycle converged in 10 iterations), Turkish UI with decimal commas, draft kept after reload.
 - PR: #11 (based on PR #10). Maintainer action: Q6 (turn on Pages).
 - Next: T11 (demo check, README with link and screenshots) after the PRs are merged and Pages is on.
+
+## 2026-11-21 — Claude (maintainer-requested session) — merge + T11
+- Merged PRs #2–#11 into `main` (maintainer's request), in order with merge commits; T01–T10 marked done. Turned on GitHub Pages (Source: GitHub Actions) through the maintainer's browser session; the `pages` workflow published the demo at https://open-processdesign.github.io/simulator/. Nightly scheduled task switched off (maintainer's request).
+- T11 demo check: on the live site (real jsDelivr + PyPI downloads) the engine loaded and all three examples solved (flash drum 10 ms, column 40 ms, HDA loop < 1 s). End-to-end in Turkish in headless Chrome: flash drum drawn with the mouse, values typed with decimal commas, solved; same numbers as English. No blockers found.
+- README: live link, how to try it, units list, screenshots, updated architecture, developer commands. ARCHITECTURE.md: note on the browser engine.
+- PR: #12.
+- Next (M2): rigorous units, unit sets, validation suite; see ROADMAP.md.

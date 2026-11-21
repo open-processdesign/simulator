@@ -3,7 +3,7 @@
     "name": "Open Process Design",
     "disclaimer": "Yalnızca eğitim ve ön tasarım amaçlıdır. Sonuçları kullanmadan önce doğrulayın."
   },
-  "shell": { "steps_label": "İş akışı adımları", "language": "Dil", "step_of": "Adım {{current}} / {{total}}" },
+  "shell": {"steps_label": "İş akışı adımları", "language": "Dil", "step_of": "Adım {{current}} / {{total}}", "units": "Birimler", "unit_sets": {"SI": "SI", "METRIC": "Metrik", "ENGLISH": "İngiliz"}, "unit_sets_long": {"SI": "SI: K, Pa, mol/s, W", "METRIC": "Metrik: °C, bar, kmol/h, kW", "ENGLISH": "İngiliz: °F, psia, lbmol/h, Btu/h"}},
   "languages": { "en": "English", "tr": "Türkçe" },
   "pages": {
     "components": { "title": "Bileşenler", "empty": "Prosesinizdeki kimyasal bileşenleri ekleyin. Bileşen arama sonraki bir adımda gelecek." },

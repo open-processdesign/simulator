@@ -93,3 +93,8 @@ Template:
 - Done: NRTL property method in the reference engine (ChemSep NRTL parameters, user overrides, ideal fallback with warning), robust P–VF flash fallback, NRTL binary table in the UI (b_ij, b_ji, α), example `methanol-water-column-nrtl.opd.json`. EN/TR strings.
 - Tests: engine 86 passed (methanol–water vs. experiment at 4 points; NRTL beats Raoult; ethanol–water azeotrope; parameter sources; τ = 0 equals Raoult). Web 42 passed. All examples solve in Pyodide.
 - PR: #13 (based on PR #12).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T13
+- Done: unit-set selector in the top bar (SI / Metric / English); all inputs, the stream table, unit results and component boiling points convert; storage stays SI. Top bar compacted (visually hidden labels) so it fits at 1366 px.
+- Tests: web 48 passed (round trips and textbook factors, kind mapping, metric input stored as SI, psi display, metric stream table). E2E in Chrome: NRTL methanol–water example in metric units.
+- PR: #14 (based on PR #13).

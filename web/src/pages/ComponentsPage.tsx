@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { COMPONENT_SOURCE, componentByCas, searchComponents } from "@/components-db/search";
 import { formatNumber } from "@/lib/format";
 import { useFlowsheet } from "@/state/FlowsheetProvider";
+import { useUnits } from "@/units/UnitSetProvider";
 
 /** Step 1: choose the chemical components of the process. */
 export function ComponentsPage() {
@@ -15,6 +16,7 @@ export function ComponentsPage() {
   const selectedCas = new Set(doc.components.map((c) => c.cas));
   const inputId = useId();
   const lang = i18n.resolvedLanguage;
+  const units = useUnits();
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 px-6 py-8">
@@ -79,7 +81,7 @@ export function ComponentsPage() {
                 <th className="px-3 py-1.5 font-medium">{t("components.formula")}</th>
                 <th className="px-3 py-1.5 font-medium">{t("components.cas")}</th>
                 <th className="px-3 py-1.5 text-right font-medium">{t("components.mw")} [g/mol]</th>
-                <th className="px-3 py-1.5 text-right font-medium">{t("components.tb")} [K]</th>
+                <th className="px-3 py-1.5 text-right font-medium">{t("components.tb")} [{units.unit("temperature")}]</th>
                 <th className="w-10" />
               </tr>
             </thead>
@@ -92,7 +94,7 @@ export function ComponentsPage() {
                     <td className="num px-3 py-1.5">{c.formula ?? data?.formula ?? "–"}</td>
                     <td className="num px-3 py-1.5">{c.cas}</td>
                     <td className="num px-3 py-1.5 text-right">{data ? formatNumber(data.mw, lang, 2) : "–"}</td>
-                    <td className="num px-3 py-1.5 text-right">{data ? formatNumber(data.tb, lang, 2) : "–"}</td>
+                    <td className="num px-3 py-1.5 text-right">{data ? formatNumber(units.toDisplay("temperature", data.tb), lang, 2) : "–"}</td>
                     <td className="px-1 text-right">
                       <Button
                         variant="ghost"

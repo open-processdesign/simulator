@@ -143,7 +143,7 @@ function SpecGroupEditor({ unit, group }: { unit: Unit; group: SpecGroup }) {
       {active && (
         <QuantityField
           label={t(`flowsheet.specs.${active}`)}
-          unit={specUnit(active)}
+          name={active}
           value={unit.specs?.[active]?.value}
           onCommit={(v) =>
             dispatch({
@@ -170,7 +170,7 @@ function SplitterEditor({ unit }: { unit: Unit }) {
         <QuantityField
           key={port}
           label={t("flowsheet.split_to", { port: t(`flowsheet.ports.${port}`) })}
-          unit="1"
+          name="fraction"
           value={unit.specs?.[`split_${port}`]?.value}
           onCommit={(v) => dispatch({ type: "set_spec", id: unit.id, name: `split_${port}`, quantity: v === null ? null : { value: v, unit: "1" } })}
         />
@@ -211,10 +211,10 @@ function FeedStreamEditor({ stream, doc }: { stream: Stream; doc: Flowsheet }) {
           </label>
         ))}
       </div>
-      <QuantityField label={t(`flowsheet.specs.${thermal}`)} unit={specUnit(thermal)} value={st[thermal]?.value}
+      <QuantityField label={t(`flowsheet.specs.${thermal}`)} name={thermal} value={st[thermal]?.value}
         onCommit={(v) => setField(thermal, v, [thermal === "temperature" ? "vapor_fraction" : "temperature"])} />
-      <QuantityField label={t("flowsheet.specs.pressure")} unit="Pa" value={st.pressure?.value} onCommit={(v) => setField("pressure", v)} />
-      <QuantityField label={t("flowsheet.specs.molar_flow")} unit="mol/s" value={st.molar_flow?.value} onCommit={(v) => setField("molar_flow", v)} />
+      <QuantityField label={t("flowsheet.specs.pressure")} name="pressure" value={st.pressure?.value} onCommit={(v) => setField("pressure", v)} />
+      <QuantityField label={t("flowsheet.specs.molar_flow")} name="molar_flow" value={st.molar_flow?.value} onCommit={(v) => setField("molar_flow", v)} />
 
       <h4 className="mt-2 text-sm font-semibold">{t("flowsheet.composition")}</h4>
       {doc.components.length === 0 ? (
@@ -222,7 +222,7 @@ function FeedStreamEditor({ stream, doc }: { stream: Stream; doc: Flowsheet }) {
       ) : (
         <>
           {doc.components.map((c) => (
-            <QuantityField key={c.id} label={c.name} unit="1" value={fractions[c.id]}
+            <QuantityField key={c.id} label={c.name} name="fraction" value={fractions[c.id]}
               onCommit={(v) => {
                 const next = { ...fractions };
                 if (v === null) delete next[c.id];
@@ -294,7 +294,7 @@ function ReactionsEditor({ unit }: { unit: Unit }) {
           </div>
           <p className="text-xs text-muted">{t("flowsheet.stoich_hint")}</p>
           {doc.components.map((c) => (
-            <QuantityField key={c.id} label={`ν ${c.name}`} unit="1" value={r.stoichiometry[c.id]}
+            <QuantityField key={c.id} label={`ν ${c.name}`} name="number" value={r.stoichiometry[c.id]}
               onCommit={(v) => {
                 const stoich = { ...r.stoichiometry };
                 if (v === null || v === 0) delete stoich[c.id];
@@ -310,7 +310,7 @@ function ReactionsEditor({ unit }: { unit: Unit }) {
               {doc.components.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </label>
-          <QuantityField label={t("flowsheet.conversion")} unit="1" value={r.conversion}
+          <QuantityField label={t("flowsheet.conversion")} name="fraction" value={r.conversion}
             onCommit={(v) => update(k, { conversion: v ?? 0 })} />
         </div>
       ))}

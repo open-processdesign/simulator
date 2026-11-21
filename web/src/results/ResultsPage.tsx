@@ -5,9 +5,7 @@ import { formatNumber } from "@/lib/format";
 import { IssueList } from "./IssueList";
 import { RunButton } from "./RunButton";
 import { StreamTable } from "./StreamTable";
-
-/** Digits by unit: whole watts and pascals, 2 for kelvin, 4 otherwise. */
-const DIGITS: Record<string, number> = { W: 0, Pa: 0, K: 2, "W/K": 1, "mol/s": 4 };
+import { useUnits } from "@/units/UnitSetProvider";
 
 /** Step 5: stream table, unit results and messages of the last run. */
 export function ResultsPage() {
@@ -15,6 +13,7 @@ export function ResultsPage() {
   const { doc } = useFlowsheet();
   const { run, stale } = useRun();
   const lang = i18n.resolvedLanguage;
+  const units = useUnits();
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-5 px-6 py-8">
@@ -66,8 +65,8 @@ export function ResultsPage() {
                                 : name.startsWith("extent_") ? t("flowsheet.extent_n", { n: name.slice(7) })
                                 : t(`flowsheet.specs.${name}`, { defaultValue: name })}
                             </dt>
-                            <dd className="num text-right">{formatNumber(q.value, lang, DIGITS[q.unit] ?? (name.endsWith("stages") || name === "feed_stage" ? 1 : 4))}</dd>
-                            <dd className="num text-xs leading-5 text-muted">{q.unit === "1" ? "–" : q.unit}</dd>
+                            <dd className="num text-right">{formatNumber(units.toDisplay(name, q.value), lang, units.digits(name))}</dd>
+                            <dd className="num text-xs leading-5 text-muted">{units.unit(name)}</dd>
                           </div>
                         ))}
                       </dl>

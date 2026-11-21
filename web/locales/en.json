@@ -3,7 +3,7 @@
     "name": "Open Process Design",
     "disclaimer": "For education and preliminary design only. Verify results before use."
   },
-  "shell": { "steps_label": "Workflow steps", "language": "Language", "step_of": "Step {{current}} of {{total}}" },
+  "shell": {"steps_label": "Workflow steps", "language": "Language", "step_of": "Step {{current}} of {{total}}", "units": "Units", "unit_sets": {"SI": "SI", "METRIC": "Metric", "ENGLISH": "English"}, "unit_sets_long": {"SI": "SI: K, Pa, mol/s, W", "METRIC": "Metric: °C, bar, kmol/h, kW", "ENGLISH": "English: °F, psia, lbmol/h, Btu/h"}},
   "languages": { "en": "English", "tr": "Türkçe" },
   "pages": {
     "components": { "title": "Components", "empty": "Add the chemical components of your process. Component search arrives in a later step." },

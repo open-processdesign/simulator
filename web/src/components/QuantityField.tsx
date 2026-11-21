@@ -2,21 +2,28 @@ import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { parseNumber } from "@/lib/format";
+import { useUnits } from "@/units/UnitSetProvider";
 
 /**
  * Number input with a unit suffix (DESIGN_SYSTEM.md → Input with unit suffix).
- * Accepts a decimal comma; commits on blur or Enter; empty clears the value.
+ * `name` is the OPD spec / state name (e.g. "temperature", "pressure_drop"); the value is SI
+ * and is shown and typed in the user's unit set. Accepts a decimal comma; commits on blur or
+ * Enter; empty clears the value.
  */
-export function QuantityField({ label, unit, value, onCommit, compact = false }: {
+export function QuantityField({ label, name, value, onCommit, compact = false }: {
   label: string;
-  unit: string;
+  name: string;
   value: number | undefined;
   onCommit: (value: number | null) => void;
   compact?: boolean;
 }) {
   const { i18n } = useTranslation();
+  const units = useUnits();
   const id = useId();
-  const shown = value === undefined ? "" : value.toLocaleString(i18n.resolvedLanguage, { maximumFractionDigits: 10, useGrouping: false });
+  const unit = units.unit(name);
+  const display = value === undefined ? undefined : units.toDisplay(name, value);
+  const shown = display === undefined ? ""
+    : Number(display.toPrecision(12)).toLocaleString(i18n.resolvedLanguage, { maximumFractionDigits: 10, useGrouping: false });
   const [text, setText] = useState(shown);
   useEffect(() => setText(shown), [shown]);
   const invalid = text.trim() !== "" && parseNumber(text) === null;
@@ -25,7 +32,8 @@ export function QuantityField({ label, unit, value, onCommit, compact = false }:
     if (text.trim() === "") return value !== undefined && onCommit(null);
     const parsed = parseNumber(text);
     if (parsed === null) return setText(shown);
-    if (parsed !== value) onCommit(parsed);
+    if (text.trim() === shown) return;
+    onCommit(units.fromDisplay(name, parsed));
   };
 
   return (
@@ -47,7 +55,7 @@ export function QuantityField({ label, unit, value, onCommit, compact = false }:
           onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
           className="num w-28 bg-transparent px-2 text-right text-sm outline-none focus-visible:shadow-none"
         />
-        <span className="num w-12 border-l border-border px-1.5 text-xs text-muted">{unit === "1" ? "–" : unit}</span>
+        <span className="num w-12 border-l border-border px-1.5 text-xs text-muted">{unit}</span>
       </div>
     </div>
   );

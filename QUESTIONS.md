@@ -16,6 +16,9 @@ Default: keep; the test tolerance (ΔVF ≤ 0.01) also covers other common Antoi
 **Q6 · Turn on GitHub Pages (T10).** Settings → Pages → Build and deployment → Source: **GitHub Actions**. After that, every merge to `main` publishes the demo at https://open-processdesign.github.io/simulator/.
 Default: until this is done the `pages` workflow fails at the deploy step; nothing else is affected.
 
+**Q7 · Methanol–water VLE check (T12 test).** The NRTL test compares with methanol–water data at 1 atm: (x, y, T °C) = (0.10, 0.418, 87.7), (0.30, 0.665, 78.0), (0.50, 0.779, 73.1), (0.80, 0.915, 67.6), cited as Perry's Handbook. Please confirm against your copy (or a lab-course table).
+Default: keep; tolerances are 0.7 K and 0.02 in y.
+
 ## Answered
 
 **Q1 · Server for DWSIM.** No server for now; team is Berkay + Claude. → D011, D012 (DWSIM after the demo).

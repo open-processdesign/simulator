@@ -10,6 +10,10 @@ export type FlowsheetAction =
   | { type: "set_package"; package: ThermoPackage }
   | { type: "set_kij"; i: string; j: string; value: number }
   | { type: "clear_kij"; i: string; j: string }
+  /** A user binary parameter. `directional` (e.g. NRTL b_ij) keeps i→j distinct from j→i. */
+  | { type: "set_binary"; i: string; j: string; name: string; value: number; directional?: boolean }
+  /** Remove every user binary parameter of a pair (back to database values). */
+  | { type: "clear_pair"; i: string; j: string }
   | { type: "replace"; doc: Flowsheet }
   | { type: "add_unit"; unitType: string; x: number; y: number }
   | { type: "remove_unit"; id: string }
@@ -81,6 +85,22 @@ export function flowsheetReducer(doc: Flowsheet, action: FlowsheetAction): Flows
     }
     case "set_package":
       return { ...doc, thermo: { ...doc.thermo, package: action.package } };
+    case "set_binary": {
+      const matches = (p: BinaryParameter) =>
+        p.name.toLowerCase() === action.name &&
+        (action.directional ? p.i === action.i && p.j === action.j : samePair(p, action.i, action.j));
+      const others = (doc.thermo.binary_parameters ?? []).filter((p) => !matches(p));
+      const param: BinaryParameter = { i: action.i, j: action.j, name: action.name, value: action.value, source: "user" };
+      return { ...doc, thermo: { ...doc.thermo, binary_parameters: [...others, param] } };
+    }
+    case "clear_pair":
+      return {
+        ...doc,
+        thermo: {
+          ...doc.thermo,
+          binary_parameters: (doc.thermo.binary_parameters ?? []).filter((p) => !samePair(p, action.i, action.j)),
+        },
+      };
     case "set_kij": {
       const others = (doc.thermo.binary_parameters ?? []).filter(
         (p) => !(p.name.toLowerCase() === "kij" && samePair(p, action.i, action.j)),

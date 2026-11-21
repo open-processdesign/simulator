@@ -38,7 +38,7 @@ describe("persistence helpers", () => {
 
   it("ships the example gallery", () => {
     expect(EXAMPLES.map((e) => e.file).sort()).toEqual([
-      "benzene-toluene-column.opd.json", "flash-drum.opd.json", "hda-recycle-loop.opd.json"]);
+      "benzene-toluene-column.opd.json", "flash-drum.opd.json", "hda-recycle-loop.opd.json", "methanol-water-column-nrtl.opd.json"]);
   });
 });
 

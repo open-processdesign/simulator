@@ -88,3 +88,8 @@ Template:
 - README: live link, how to try it, units list, screenshots, updated architecture, developer commands. ARCHITECTURE.md: note on the browser engine.
 - PR: #12.
 - Next (M2): rigorous units, unit sets, validation suite; see ROADMAP.md.
+
+## 2026-11-21 — Claude (maintainer-requested session) — T12
+- Done: NRTL property method in the reference engine (ChemSep NRTL parameters, user overrides, ideal fallback with warning), robust P–VF flash fallback, NRTL binary table in the UI (b_ij, b_ji, α), example `methanol-water-column-nrtl.opd.json`. EN/TR strings.
+- Tests: engine 86 passed (methanol–water vs. experiment at 4 points; NRTL beats Raoult; ethanol–water azeotrope; parameter sources; τ = 0 equals Raoult). Web 42 passed. All examples solve in Pyodide.
+- PR: #13 (based on PR #12).

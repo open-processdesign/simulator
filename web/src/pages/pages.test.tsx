@@ -47,11 +47,11 @@ describe("Thermodynamics page", () => {
     await i18n.changeLanguage("en");
   });
 
-  it("switches the property method; Raoult needs no k_ij; NRTL is not offered yet", async () => {
+  it("switches the property method; Raoult needs no k_ij", async () => {
     const user = userEvent.setup();
     renderWithApp(<ThermoPage />, withComponents(["benzene", "benzene", "71-43-2"], ["toluene", "toluene", "108-88-3"]));
     expect(screen.getByRole("radio", { name: /^Peng–Robinson/ })).toBeChecked();
-    expect(screen.getByRole("radio", { name: /^NRTL/ })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: /^NRTL/ })).toBeEnabled();
     await user.click(screen.getByRole("radio", { name: /^Ideal/ }));
     expect(screen.getByText("Raoult's law uses no binary parameters.")).toBeInTheDocument();
   });
@@ -80,5 +80,27 @@ describe("Thermodynamics page", () => {
 
     await user.click(screen.getByRole("button", { name: "Use database value" }));
     await waitFor(() => expect(within(screen.getAllByRole("row")[3]).getByText("Missing → 0")).toBeInTheDocument());
+  });
+
+  it("shows NRTL b_ij, b_ji and α with sources and accepts user values", async () => {
+    const user = userEvent.setup();
+    const doc = withComponents(["methanol", "methanol", "67-56-1"], ["water", "water", "7732-18-5"], ["benzene", "benzene", "71-43-2"]);
+    renderWithApp(<ThermoPage />, { ...doc, thermo: { package: "NRTL" } });
+    expect(screen.getByText("NRTL binary parameters (τ_ij = b_ij / T)")).toBeInTheDocument();
+    const table = await screen.findByRole("table");
+    expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(
+      ["Pair", "b_ij [K]", "b_ji [K]", "α_ij", "Source", ""]);
+    const rows = within(table).getAllByRole("row").slice(1);
+    expect(within(rows[0]).getByRole("textbox", { name: "b_ij [K] for methanol–water" })).toHaveValue("-95.13");
+    expect(within(rows[0]).getByRole("textbox", { name: "b_ji [K] for water–methanol" })).toHaveValue("398.95");
+    expect(within(rows[0]).getByText("Database")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("Missing → 0")).toBeInTheDocument();
+    expect(screen.getByText(/treated as ideal/)).toBeInTheDocument();
+
+    const b = within(rows[1]).getByRole("textbox", { name: "b_ji [K] for benzene–methanol" });
+    await user.clear(b);
+    await user.type(b, "250,5{Enter}");
+    await waitFor(() => expect(within(screen.getAllByRole("row")[2]).getByText("User")).toBeInTheDocument());
+    expect(within(screen.getAllByRole("row")[2]).getByRole("textbox", { name: "b_ji [K] for benzene–methanol" })).toHaveValue("250.50");
   });
 });

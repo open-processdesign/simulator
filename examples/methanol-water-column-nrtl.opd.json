@@ -1,0 +1,137 @@
+{
+  "format": "opd-flowsheet",
+  "version": "0.1",
+  "name": "Methanol–water column (NRTL)",
+  "description": "Non-ideal liquid: NRTL activity coefficients with ChemSep parameters. The shortcut column assumes a constant relative volatility, which is only approximate for strongly non-ideal mixtures; a rigorous column follows in M2.",
+  "components": [
+    {
+      "id": "methanol",
+      "name": "methanol",
+      "cas": "67-56-1",
+      "formula": "CH4O"
+    },
+    {
+      "id": "water",
+      "name": "water",
+      "cas": "7732-18-5",
+      "formula": "H2O"
+    }
+  ],
+  "thermo": {
+    "package": "NRTL"
+  },
+  "units": [
+    {
+      "id": "FEED-1",
+      "type": "feed"
+    },
+    {
+      "id": "T-1",
+      "type": "shortcut_column",
+      "label": "Methanol column",
+      "specs": {
+        "lk_recovery": {
+          "value": 0.99,
+          "unit": "1"
+        },
+        "hk_recovery": {
+          "value": 0.99,
+          "unit": "1"
+        },
+        "reflux_ratio_factor": {
+          "value": 1.25,
+          "unit": "1"
+        },
+        "pressure": {
+          "value": 101325,
+          "unit": "Pa"
+        }
+      },
+      "options": {
+        "light_key": "methanol",
+        "heavy_key": "water"
+      }
+    },
+    {
+      "id": "PROD-1",
+      "type": "product",
+      "label": "Methanol"
+    },
+    {
+      "id": "PROD-2",
+      "type": "product",
+      "label": "Water"
+    }
+  ],
+  "streams": [
+    {
+      "id": "S1",
+      "from": {
+        "unit": "FEED-1",
+        "port": "out"
+      },
+      "to": {
+        "unit": "T-1",
+        "port": "in"
+      },
+      "state": {
+        "vapor_fraction": {
+          "value": 0.0,
+          "unit": "1"
+        },
+        "pressure": {
+          "value": 101325,
+          "unit": "Pa"
+        },
+        "molar_flow": {
+          "value": 100.0,
+          "unit": "mol/s"
+        },
+        "mole_fractions": {
+          "methanol": 0.3,
+          "water": 0.7
+        }
+      }
+    },
+    {
+      "id": "S2",
+      "from": {
+        "unit": "T-1",
+        "port": "distillate"
+      },
+      "to": {
+        "unit": "PROD-1",
+        "port": "in"
+      }
+    },
+    {
+      "id": "S3",
+      "from": {
+        "unit": "T-1",
+        "port": "bottoms"
+      },
+      "to": {
+        "unit": "PROD-2",
+        "port": "in"
+      }
+    }
+  ],
+  "layout": {
+    "FEED-1": {
+      "x": 0,
+      "y": 120
+    },
+    "T-1": {
+      "x": 200,
+      "y": 120
+    },
+    "PROD-1": {
+      "x": 420,
+      "y": 20
+    },
+    "PROD-2": {
+      "x": 420,
+      "y": 230
+    }
+  }
+}

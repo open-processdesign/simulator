@@ -14,7 +14,7 @@ const PACKAGES: { id: ThermoPackage; available: boolean }[] = [
   { id: "IDEAL", available: true },
   { id: "PR", available: true },
   { id: "SRK", available: true },
-  { id: "NRTL", available: false },
+  { id: "NRTL", available: true },
 ];
 
 const SOURCE_STYLE: Record<string, string> = {
@@ -71,6 +71,38 @@ export function ThermoPage() {
   );
 }
 
+/** Columns of the binary-parameter table per property method. */
+type Column = { name: string; direction: "pair" | "ij" | "ji"; label: string; digits: number };
+const COLUMNS: Partial<Record<ThermoPackage, Column[]>> = {
+  PR: [{ name: "kij", direction: "pair", label: "k_ij", digits: 4 }],
+  SRK: [{ name: "kij", direction: "pair", label: "k_ij", digits: 4 }],
+  NRTL: [
+    { name: "nrtl_b", direction: "ij", label: "b_ij [K]", digits: 2 },
+    { name: "nrtl_b", direction: "ji", label: "b_ji [K]", digits: 2 },
+    { name: "nrtl_alpha", direction: "pair", label: "α_ij", digits: 4 },
+  ],
+};
+
+type Pair = { a: string; b: string; cells: (BinaryParameterRow | undefined)[]; source: string };
+
+/** Group engine rows by component pair; the pair's source is user > missing > database. */
+function pairs(rows: BinaryParameterRow[], columns: Column[]): Pair[] {
+  const out: Pair[] = [];
+  for (const row of rows) {
+    if (out.some((p) => (p.a === row.i && p.b === row.j) || (p.a === row.j && p.b === row.i))) continue;
+    const [a, b] = [row.i, row.j];
+    const cells = columns.map((c) =>
+      rows.find((r) => r.name === c.name && (
+        c.direction === "pair" ? (r.i === a && r.j === b) || (r.i === b && r.j === a)
+        : c.direction === "ij" ? r.i === a && r.j === b : r.i === b && r.j === a)),
+    );
+    const sources = cells.map((c) => c?.source);
+    const source = sources.includes("user") ? "user" : sources.includes("missing") ? "missing" : (sources[0] ?? "missing");
+    out.push({ a, b, cells, source });
+  }
+  return out;
+}
+
 function BinaryParameters() {
   const { t, i18n } = useTranslation();
   const { doc, dispatch } = useFlowsheet();
@@ -78,10 +110,10 @@ function BinaryParameters() {
   const [rows, setRows] = useState<BinaryParameterRow[] | null>(null);
   const pkg = doc.thermo.package;
   const n = doc.components.length;
-  const needsKij = pkg === "PR" || pkg === "SRK";
+  const columns = COLUMNS[pkg];
 
   useEffect(() => {
-    if (!needsKij || n < 2 || status.state !== "ready" || !client) {
+    if (!columns || n < 2 || status.state !== "ready" || !client) {
       setRows(null);
       return;
     }
@@ -93,18 +125,19 @@ function BinaryParameters() {
     return () => {
       alive = false;
     };
-  }, [client, status.state, needsKij, n, doc.components, doc.thermo]);
+  }, [client, status.state, columns, n, doc.components, doc.thermo]);
 
   const name = (id: string) => doc.components.find((c) => c.id === id)?.name ?? id;
+  const grouped = rows && columns ? pairs(rows, columns) : null;
 
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-base font-semibold">{t("thermo.binary_title")}</h2>
-      {!needsKij ? (
+      <h2 className="text-base font-semibold">{t(pkg === "NRTL" ? "thermo.binary_title_nrtl" : "thermo.binary_title")}</h2>
+      {!columns ? (
         <p className="text-sm text-muted">{t("thermo.binary_not_needed")}</p>
       ) : n < 2 ? (
         <p className="text-sm text-muted">{t("thermo.binary_need_two")}</p>
-      ) : !rows ? (
+      ) : !grouped ? (
         <p className="text-sm text-muted">{status.state === "failed" ? t("engine.failed") : t("thermo.binary_waiting")}</p>
       ) : (
         <>
@@ -112,81 +145,92 @@ function BinaryParameters() {
             <thead className="bg-surface-muted text-left text-muted">
               <tr>
                 <th className="px-3 py-1.5 font-medium">{t("thermo.pair")}</th>
-                <th className="px-3 py-1.5 text-right font-medium">{t("thermo.kij")}</th>
+                {columns.map((c) => (
+                  <th key={c.label} className="num px-3 py-1.5 text-right font-medium">{c.label}</th>
+                ))}
                 <th className="px-3 py-1.5 font-medium">{t("thermo.source")}</th>
                 <th className="w-10" />
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
-                <KijRow
-                  key={`${row.i}|${row.j}`}
-                  row={row}
-                  label={`${name(row.i)} – ${name(row.j)}`}
-                  lang={i18n.resolvedLanguage}
-                  onSet={(value) => dispatch({ type: "set_kij", i: row.i, j: row.j, value })}
-                  onReset={() => dispatch({ type: "clear_kij", i: row.i, j: row.j })}
-                />
+              {grouped.map((p) => (
+                <tr key={`${p.a}|${p.b}`} className="border-t border-border">
+                  <td className="px-3 py-1">{`${name(p.a)} – ${name(p.b)}`}</td>
+                  {columns.map((c, k) => {
+                    const cell = p.cells[k];
+                    const [i, j] = c.direction === "ji" ? [p.b, p.a] : [p.a, p.b];
+                    return (
+                      <td key={c.label} className="px-3 py-1 text-right">
+                        {cell && (
+                          <ParamInput
+                            label={t("thermo.edit_param", { param: c.label, i: name(i), j: name(j) })}
+                            value={cell.value}
+                            digits={c.digits}
+                            lang={i18n.resolvedLanguage}
+                            onSet={(value) => dispatch({ type: "set_binary", i, j, name: c.name, value, directional: c.direction !== "pair" })}
+                          />
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className="px-3 py-1">
+                    <span className={cn("rounded-sm px-1.5 py-0.5 text-xs", SOURCE_STYLE[p.source] ?? "bg-surface-muted text-muted")}>
+                      {t(`thermo.sources.${p.source}`)}
+                    </span>
+                  </td>
+                  <td className="px-1 text-right">
+                    {p.source === "user" && (
+                      <Button variant="ghost" size="sm" aria-label={t("thermo.reset")} title={t("thermo.reset")}
+                        onClick={() => dispatch({ type: "clear_pair", i: p.a, j: p.b })}>
+                        <RotateCcw aria-hidden />
+                      </Button>
+                    )}
+                  </td>
+                </tr>
               ))}
             </tbody>
           </table>
-          {rows.some((r) => r.source === "missing") && <p className="text-xs text-warn">{t("thermo.missing_note")}</p>}
-          <p className="text-xs text-subtle">{t("thermo.database_note")}</p>
+          {grouped.some((p) => p.source === "missing") && (
+            <p className="text-xs text-warn">{t(pkg === "NRTL" ? "thermo.missing_note_nrtl" : "thermo.missing_note")}</p>
+          )}
+          <p className="text-xs text-subtle">{t(pkg === "NRTL" ? "thermo.database_note_nrtl" : "thermo.database_note")}</p>
         </>
       )}
     </section>
   );
 }
 
-function KijRow({ row, label, lang, onSet, onReset }: {
-  row: BinaryParameterRow;
+function ParamInput({ label, value, digits, lang, onSet }: {
   label: string;
+  value: number;
+  digits: number;
   lang: string | undefined;
   onSet: (value: number) => void;
-  onReset: () => void;
 }) {
-  const { t } = useTranslation();
-  const shown = formatNumber(row.value, lang, 4);
+  const shown = formatNumber(value, lang, digits);
   const [text, setText] = useState(shown);
   useEffect(() => setText(shown), [shown]);
   const invalid = parseNumber(text) === null;
 
   const commit = () => {
-    const value = parseNumber(text);
-    if (value === null) return setText(shown);
-    if (formatNumber(value, lang, 4) !== shown) onSet(value);
+    const parsed = parseNumber(text);
+    if (parsed === null) return setText(shown);
+    if (formatNumber(parsed, lang, digits) !== shown) onSet(parsed);
   };
 
   return (
-    <tr className="border-t border-border">
-      <td className="px-3 py-1">{label}</td>
-      <td className="px-3 py-1 text-right">
-        <input
-          aria-label={t("thermo.edit_kij", { i: row.i, j: row.j })}
-          aria-invalid={invalid}
-          inputMode="decimal"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-          className={cn(
-            "num h-7 w-24 rounded-sm border bg-surface px-2 text-right text-sm",
-            invalid ? "border-error" : "border-border-strong",
-          )}
-        />
-      </td>
-      <td className="px-3 py-1">
-        <span className={cn("rounded-sm px-1.5 py-0.5 text-xs", SOURCE_STYLE[row.source] ?? "bg-surface-muted text-muted")}>
-          {t(`thermo.sources.${row.source}`)}
-        </span>
-      </td>
-      <td className="px-1 text-right">
-        {row.source === "user" && (
-          <Button variant="ghost" size="sm" aria-label={t("thermo.reset")} title={t("thermo.reset")} onClick={onReset}>
-            <RotateCcw aria-hidden />
-          </Button>
-        )}
-      </td>
-    </tr>
+    <input
+      aria-label={label}
+      aria-invalid={invalid}
+      inputMode="decimal"
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+      className={cn(
+        "num h-7 w-24 rounded-sm border bg-surface px-2 text-right text-sm",
+        invalid ? "border-error" : "border-border-strong",
+      )}
+    />
   );
 }

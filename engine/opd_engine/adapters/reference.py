@@ -8,7 +8,7 @@ bookkeeping: port conventions, material and energy balances, and the solve order
 
 Scope: units feed, product, mixer, splitter, heater, valve, flash, pump, compressor,
 heat exchanger, conversion reactor, shortcut column (T09); property packages
-IDEAL (Raoult), PR and SRK; recycle loops through tear streams converged with bounded
+IDEAL (Raoult), PR, SRK and NRTL (T12); recycle loops through tear streams converged with bounded
 Wegstein or successive substitution (see `recycle.py`, T08).
 
 Port and spec conventions (all values SI, see DECISIONS.md D007 and D013):
@@ -59,6 +59,7 @@ from typing import Any, Callable
 import thermo
 from pydantic import ValidationError
 from thermo import (
+    NRTL,
     CEOSGas,
     CEOSLiquid,
     ChemicalConstantsPackage,
@@ -79,7 +80,7 @@ from .recycle import Accelerator, Block, Edge, solve_plan
 UNIT_TYPES = frozenset({"feed", "product", "mixer", "splitter", "heater", "valve", "flash",
                         "pump", "compressor", "heat_exchanger", "conversion_reactor",
                         "shortcut_column"})
-THERMO_PACKAGES = frozenset({"IDEAL", "PR", "SRK"})
+THERMO_PACKAGES = frozenset({"IDEAL", "PR", "SRK", "NRTL"})
 
 # SI unit strings accepted per spec name (v0.1 stores SI only).
 _SI = {
@@ -156,6 +157,19 @@ class _Thermo:
                 VolumeLiquids=self.props.VolumeLiquids,
                 equilibrium_basis="Psat",  # K_i = Psat_i / P
             )
+        elif self.package == "NRTL":
+            # Modified Raoult: ideal gas + NRTL liquid, τ_ij = b_ij / T (Renon & Prausnitz,
+            # AIChE J. 14 (1968) 135). Parameters: document → ChemSep NRTL table → ideal pair.
+            tau_bs, alphas = self._nrtl(fs, n)
+            gas = IdealGas(HeatCapacityGases=self.props.HeatCapacityGases)
+            model = NRTL(T=298.15, xs=[1.0 / n] * n, tau_bs=tau_bs, alpha_cs=alphas)
+            liquid = GibbsExcessLiquid(
+                VaporPressures=self.props.VaporPressures,
+                HeatCapacityGases=self.props.HeatCapacityGases,
+                VolumeLiquids=self.props.VolumeLiquids,
+                GibbsExcessModel=model,
+                equilibrium_basis="Psat",  # K_i = γ_i Psat_i / P
+            )
         else:
             kijs = self._kijs(fs, n)
             eos = PRMIX if self.package == "PR" else SRKMIX
@@ -182,6 +196,26 @@ class _Thermo:
                                           "thermo", None, i=row["i"], j=row["j"]))
         return kij
 
+    def _nrtl(self, fs: Flowsheet, n: int) -> tuple[list[list[float]], list[list[float]]]:
+        """NRTL b_ij (K) and α_ij matrices; a pair without data is treated as ideal (warning)."""
+        index = {cid: k for k, cid in enumerate(self.ids)}
+        b = [[0.0] * n for _ in range(n)]
+        alpha = [[0.0] * n for _ in range(n)]
+        missing: set[frozenset[str]] = set()
+        for row in binary_parameter_table(fs):
+            i, j = index[row["i"]], index[row["j"]]
+            if row["name"] == "nrtl_b":
+                b[i][j] = row["value"]
+            else:
+                alpha[i][j] = alpha[j][i] = row["value"]
+            if row["source"] == "missing":
+                missing.add(frozenset((row["i"], row["j"])))
+        for pair in sorted(missing, key=lambda p: sorted(index[x] for x in p)):
+            i, j = sorted(pair, key=index.__getitem__)
+            self.issues.append(_issue(Severity.WARNING, "missing_binary_parameter", "thermo", None,
+                                      i=i, j=j))
+        return b, alpha
+
     def Hf(self, zs: list[float]) -> float:
         """Σ z_i ΔHf_i (ideal gas, 298.15 K), J/mol: shifts thermo's H to a reaction basis."""
         return sum(z * hf for z, hf in zip(zs, self.constants.Hfgs))
@@ -196,7 +230,32 @@ class _Thermo:
     def flash_raw(self, zs: list[float], **spec: float) -> Any:
         """Run a `thermo` flash for composition `zs` (pure components need no `zs`)."""
         kwargs = dict(spec) if len(zs) == 1 else dict(spec, zs=zs)
-        return self.flasher.flash(**kwargs)
+        try:
+            return self.flasher.flash(**kwargs)
+        except Exception:
+            if set(spec) == {"P", "VF"} and 0 < spec["VF"] < 1 and len(zs) > 1:
+                return self._flash_PVF_bisect(zs, spec["P"], spec["VF"])
+            raise
+
+    def _flash_PVF_bisect(self, zs: list[float], P: float, VF: float) -> Any:
+        """P–VF flash by bisection on T between the bubble and dew points (PT flashes).
+
+        Fallback for `thermo` 0.6.1, whose two-phase P–VF solver can fail with activity
+        models; vapour fraction rises monotonically with T at fixed P and composition.
+        """
+        lo = self.flasher.flash(P=P, VF=0.0, zs=zs).T
+        hi = self.flasher.flash(P=P, VF=1.0, zs=zs).T
+        res = None
+        for _ in range(100):
+            T = 0.5 * (lo + hi)
+            res = self.flasher.flash(T=T, P=P, zs=zs)
+            if _vapor_fraction(res) < VF:
+                lo = T
+            else:
+                hi = T
+            if hi - lo < 1e-9 * T:
+                break
+        return res
 
     def flash(self, zs: list[float], **spec: float) -> _State:
         """Overall state per mole (F = 1); the caller rescales F."""
@@ -224,12 +283,59 @@ def database_kij(package: str, cas_i: str, cas_j: str) -> float | None:
     return None
 
 
-def binary_parameter_table(fs: Flowsheet) -> list[dict[str, Any]]:
-    """One row per component pair with the k_ij the engine will use and where it comes from.
+_NRTL_TABLE = "ChemSep NRTL"
+_NRTL_DEFAULT_ALPHA = 0.3
 
-    Order of precedence: a value in the document (its own `source`: user, literature, …),
-    then the database, else 0 with source "missing". Empty for IDEAL (no k_ij in Raoult's law).
+
+def _nrtl_rows(fs: Flowsheet) -> list[dict[str, Any]]:
+    """Per pair a < b: rows nrtl_b (a→b), nrtl_b (b→a) and nrtl_alpha, with sources.
+
+    A pair takes document values first; otherwise the ChemSep NRTL table (b_ij in K,
+    τ_ij = b_ij/T); otherwise b = 0 (ideal pair) and α = 0.3, marked "missing".
     """
+    given: dict[tuple[str, str, str], tuple[float, str]] = {}
+    for p in fs.thermo.binary_parameters:
+        name = p.name.lower()
+        if name == "nrtl_b":
+            given[("nrtl_b", p.i, p.j)] = (p.value, p.source)
+        elif name == "nrtl_alpha":
+            given[("nrtl_alpha", p.i, p.j)] = given[("nrtl_alpha", p.j, p.i)] = (p.value, p.source)
+    rows = []
+    comps = fs.components
+    for a in range(len(comps)):
+        for c in range(a + 1, len(comps)):
+            ci, cj = comps[a], comps[c]
+            pair = [ci.cas, cj.cas]
+            in_db = IPDB.has_ip_specific(_NRTL_TABLE, pair, "bij")
+            db_b = IPDB.get_ip_asymmetric_matrix(_NRTL_TABLE, pair, "bij") if in_db else None
+            db_alpha = IPDB.get_ip_specific(_NRTL_TABLE, pair, "alphaij") if in_db else None
+            for (x, y, k, m) in ((ci, cj, 0, 1), (cj, ci, 1, 0)):
+                if ("nrtl_b", x.id, y.id) in given:
+                    value, source = given[("nrtl_b", x.id, y.id)]
+                elif db_b is not None:
+                    value, source = float(db_b[k][m]), "database"
+                else:
+                    value, source = 0.0, "missing"
+                rows.append({"i": x.id, "j": y.id, "name": "nrtl_b", "value": value, "source": source})
+            if ("nrtl_alpha", ci.id, cj.id) in given:
+                value, source = given[("nrtl_alpha", ci.id, cj.id)]
+            elif db_alpha is not None:
+                value, source = float(db_alpha), "database"
+            else:
+                value, source = _NRTL_DEFAULT_ALPHA, "missing"
+            rows.append({"i": ci.id, "j": cj.id, "name": "nrtl_alpha", "value": value, "source": source})
+    return rows
+
+
+def binary_parameter_table(fs: Flowsheet) -> list[dict[str, Any]]:
+    """Binary parameters the engine will use, with where each comes from.
+
+    PR/SRK: one k_ij row per pair; NRTL: b_ij, b_ji and α_ij rows per pair (see `_nrtl_rows`).
+    Order of precedence: a value in the document (its own `source`: user, literature, …),
+    then the database, else a neutral value with source "missing". Empty for IDEAL.
+    """
+    if fs.thermo.package == "NRTL":
+        return _nrtl_rows(fs)
     if fs.thermo.package not in ("PR", "SRK"):
         return []
     given = {}

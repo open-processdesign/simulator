@@ -46,6 +46,20 @@
     "unknown_unit": "{{target}}: connected to unit \"{{unit}}\", which does not exist.",
     "unknown_component": "{{target}}: unknown component(s) {{components}}.",
     "port_used_twice": "{{target}}: port \"{{port}}\" has more than one stream.",
-    "layout_orphan": "Canvas position stored for missing unit \"{{unit}}\"."
+    "layout_orphan": "Canvas position stored for missing unit \"{{unit}}\".",
+    "invalid_document": "The file is not a valid OPD flowsheet ({{where}}: {{detail}}).",
+    "unsupported_thermo": "Property package {{package}} is not available in the {{engine}} engine yet.",
+    "unsupported_unit": "{{target}}: unit type \"{{type}}\" is not available in the {{engine}} engine yet.",
+    "non_si_unit": "{{target}}: {{spec}} is given in \"{{unit}}\"; use {{expected}}.",
+    "conflicting_specs": "{{target}}: give only one of {{specs}}.",
+    "unknown_port": "{{target}}: a {{type}} has no port \"{{port}}\".",
+    "unknown_spec": "{{target}}: \"{{spec}}\" is not a setting of this unit.",
+    "too_few_outlets": "{{target}}: connect at least {{minimum}} outlet streams.",
+    "split_needs_one_open_outlet": "{{target}}: give a split fraction for every outlet except one.",
+    "invalid_split": "{{target}}: split fractions must be between 0 and 1 and add up to at most 1 (now {{sum}}).",
+    "out_of_range": "{{target}}: {{spec}} is outside the allowed range.",
+    "recycle_not_supported": "{{target}}: is part of a recycle loop; recycle loops are not supported by the {{engine}} engine yet.",
+    "calculation_failed": "{{target}}: the calculation did not converge ({{detail}}).",
+    "unknown_component_data": "No property data found for a component ({{detail}})."
   }
 }

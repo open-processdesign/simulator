@@ -25,6 +25,7 @@ Night sessions until the demo (Mon/Wed/Sat): 21, 23, 25, 28, 30 Nov · 2, 5, 7, 
 | T10 | **Save/load + deploy.** Save/open OPD JSON file, example gallery (flash drum, simple HDA-like loop), disclaimer banner, GitHub Pages deployment via Actions. | T07 | done |
 | T11 | **Demo check.** Build one process end-to-end in both languages, fix blockers, update README with link and screenshots. | T08, T09, T10 | review (PR #12) |
 | T12 | **NRTL property package (M1 gap).** NRTL activity coefficients in the reference engine (ChemSep NRTL table → user values → missing = ideal with warning); NRTL binary-parameter table in the UI (b_ij, b_ji, α); validation vs. experimental VLE. | T05 | review (PR #13) |
+| T13 | **Unit sets.** SI / Metric (°C, bar, kmol/h, kW) / English (°F, psia, lbmol/h, Btu/h) for every input and result in the UI; storage stays SI (D007); choice remembered per browser. | T07 | wip |
 
 ## After the demo — DWSIM engine (needs a host, see D012)
 | ID | Task | Depends | Status |

@@ -123,3 +123,8 @@ Template:
 - Done: `engine/opd_engine/adapters/equilibrium.py`, `equilibrium_reactor` unit in engine, schema, models and UI (reaction editor, EN/TR), example `water-gas-shift-equilibrium.opd.json`.
 - Tests: engine 116 passed — WGS K(T) vs. Moe correlation (600–800 K, within 6 %), K = 1 between 1050 and 1150 K, outlet satisfies K and element balances, WGS pressure-independent, ammonia yield rises with pressure, adiabatic outlet in equilibrium at its own T with zero duty, two simultaneous reactions (SMR + WGS) both at equilibrium. Web 51 passed; all examples solve in Pyodide.
 - PR: #19 (based on PR #18).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T19
+- Done: CONTRIBUTING.md, CODE_OF_CONDUCT.md (own text), docs/USER_GUIDE.md + USER_GUIDE.tr.md, docs/VALIDATION.md (all model checks with reference, quantity, tolerance, test; M3 next steps), README links and unit list.
+- PR: #20 (based on PR #19).
+- Maintainer action for M3: export the CHEMCAD HDA stream table (see VALIDATION.md "Next").

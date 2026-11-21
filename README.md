@@ -20,8 +20,11 @@ Open a link, build any flowsheet, run it, read the results — no installation, 
 5. **Run**, then read the stream table, unit results and messages; click a message to jump to the unit or stream.
 6. **File → Save as file** keeps the process as an `.opd.json` file you can open again or share.
 
-Units in the demo: feed, product, mixer, splitter, flash, heater/cooler, heat exchanger, valve, pump, compressor,
-conversion reactor, shortcut column (Fenske–Underwood–Gilliland). Recycle loops converge automatically (Wegstein).
+Units: feed, product, mixer, splitter, flash, heater/cooler, heat exchanger, valve, pump, compressor,
+conversion reactor, CSTR, PFR, equilibrium reactor, shortcut column (Fenske–Underwood–Gilliland), rigorous distillation
+column. Property methods: Ideal, Peng–Robinson, SRK, NRTL. Recycle loops converge automatically (Wegstein).
+Unit sets SI / Metric / English; CSV export. Guides: [English](docs/USER_GUIDE.md) · [Türkçe](docs/USER_GUIDE.tr.md).
+How each model is checked: [docs/VALIDATION.md](docs/VALIDATION.md).
 
 | Components | Thermodynamics | Results |
 |---|---|---|
@@ -88,6 +91,8 @@ DWSIM is used as a separate service and credited as such; this project does not 
 | `web/` | Web app (React, TypeScript, React Flow); runs the engine in a Web Worker |
 
 ## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md).
 
 You do not need to code to help: validate results, build process templates, collect literature
 parameters, translate, report bugs. Code contributions go through pull requests; `main` is protected

@@ -31,6 +31,7 @@ Night sessions until the demo (Mon/Wed/Sat): 21, 23, 25, 28, 30 Nov · 2, 5, 7, 
 | T16 | **Column stage profiles.** Optional `results.profiles` (axis + series) in the OPD format; the rigorous column stores T, L, V, x, y per stage; Results step shows temperature and composition charts with hover and a table view. | T15 | review (PR #17) |
 | T17 | **Kinetic reactors (M2).** CSTR and PFR with power-law kinetics (k₀, Eₐ, orders; gas or liquid concentration basis); isothermal or given duty (adiabatic); PFR length profile; checks vs. analytic first-order conversions and energy balance. | T09, T16 | review (PR #18) |
 | T18 | **Equilibrium reactor (M2).** Gas-phase chemical equilibrium with K(T) from formation data (+ fugacity coefficients); one or more reactions; isothermal or adiabatic; checks vs. WGS correlation and equilibrium conditions. | T17 | review (PR #19) |
+| T19 | **Docs (M3 start).** CONTRIBUTING, code of conduct, user guide (EN/TR), docs/VALIDATION.md listing every model check with reference and tolerance; README updated. | – | review (PR #20) |
 
 ## After the demo — DWSIM engine (needs a host, see D012)
 | ID | Task | Depends | Status |

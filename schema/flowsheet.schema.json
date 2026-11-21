@@ -94,7 +94,8 @@
         "units": {
           "type": "object",
           "additionalProperties": { "type": "object", "additionalProperties": { "$ref": "#/$defs/quantity" } }
-        }
+        },
+        "profiles": { "type": "object", "additionalProperties": { "$ref": "#/$defs/profile" } }
       }
     },
     "layout": {
@@ -108,6 +109,14 @@
     }
   },
   "$defs": {
+    "series": { "type": "object", "additionalProperties": false, "required": ["unit", "values"],
+      "properties": { "unit": { "type": "string" }, "values": { "type": "array", "items": { "type": "number" } } } },
+    "profile": { "type": "object", "additionalProperties": false, "required": ["axis", "series"],
+      "description": "Values along a unit (e.g. per column stage): one axis and any number of series of the same length.",
+      "properties": {
+        "axis": { "type": "object", "additionalProperties": false, "required": ["name", "unit", "values"],
+          "properties": { "name": { "type": "string" }, "unit": { "type": "string" }, "values": { "type": "array", "items": { "type": "number" } } } },
+        "series": { "type": "object", "additionalProperties": { "$ref": "#/$defs/series" } } } },
     "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$" },
     "port": {
       "type": "object",

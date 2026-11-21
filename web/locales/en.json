@@ -21,6 +21,7 @@
   "run": {"running": "Running…", "components": "Components", "units": "Units", "streams": "Streams", "package": "Property method: {{name}}", "fix_first": "Complete these {{count}} inputs first:", "ready": "All inputs are complete. Ready to run."},
   "file": {"menu": "File", "new": "New", "open": "Open…", "save": "Save as file", "examples": "Examples", "untitled": "Untitled process", "confirm_replace": "Replace \"{{name}}\"? Unsaved changes will be lost.", "error_json": "{{file}} is not a JSON file.", "error_format": "{{file}} is not an Open Process Design flowsheet (format opd-flowsheet 0.1).", "dismiss": "Close", "process_name": "Process name"},
   "csv": {"export": "Export CSV", "quantity": "Quantity", "value": "Value"},
+  "profiles": {"heading": "Profiles", "title": "Stage profiles of {{id}}", "title_short": "stage profiles", "stage": "Stage", "liquid_composition": "Liquid mole fraction", "show_table": "Show table", "show_chart": "Show chart", "note": "Stage 1 is the condenser, the last stage the reboiler."},
   "steps": {
     "components": "Components",
     "thermo": "Thermodynamics",

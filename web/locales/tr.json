@@ -21,6 +21,7 @@
   "run": {"running": "Çalışıyor…", "components": "Bileşenler", "units": "Üniteler", "streams": "Akımlar", "package": "Özellik yöntemi: {{name}}", "fix_first": "Önce şu {{count}} girdiyi tamamlayın:", "ready": "Tüm girdiler tamam. Çalıştırmaya hazır."},
   "file": {"menu": "Dosya", "new": "Yeni", "open": "Aç…", "save": "Dosya olarak kaydet", "examples": "Örnekler", "untitled": "Adsız proses", "confirm_replace": "\"{{name}}\" değiştirilsin mi? Kaydedilmemiş değişiklikler kaybolur.", "error_json": "{{file}} bir JSON dosyası değil.", "error_format": "{{file}} bir Open Process Design akış şeması değil (opd-flowsheet 0.1 biçimi).", "dismiss": "Kapat", "process_name": "Proses adı"},
   "csv": {"export": "CSV dışa aktar", "quantity": "Büyüklük", "value": "Değer"},
+  "profiles": {"heading": "Profiller", "title": "{{id}} kademe profilleri", "title_short": "kademe profilleri", "stage": "Kademe", "liquid_composition": "Sıvı mol kesri", "show_table": "Tabloyu göster", "show_chart": "Grafiği göster", "note": "1. kademe kondenser, son kademe kazandır."},
   "steps": {
     "components": "Bileşenler",
     "thermo": "Termodinamik",

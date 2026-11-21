@@ -114,6 +114,9 @@ _FRACTION_UNITS = {"1", "-", ""}
 # Interaction-parameter tables shipped with `thermo` (ChemSep, public domain data).
 _KIJ_TABLE = {"PR": "ChemSep PR"}
 
+# Key a unit solver may add to its results to return a profile (moved to results.profiles).
+_PROFILE = "__profile__"
+
 # Flow below this is treated as an empty stream (mol/s).
 _ZERO_FLOW = 1e-12
 
@@ -460,6 +463,7 @@ class ReferenceAdapter:
         blocks = solve_plan([u.id for u in fs.units], edges)
         states: dict[str, _State] = {}
         unit_results: dict[str, dict[str, dict[str, Any]]] = {}
+        profiles: dict[str, dict[str, Any]] = {}
 
         def solve_unit(uid: str) -> Issue | None:
             u = fs.unit(uid)
@@ -475,6 +479,9 @@ class ReferenceAdapter:
             for port, state in outlets.items():
                 states[outs[uid][port]] = state
             unit_results.pop(uid, None)
+            profile = results.pop(_PROFILE, None)
+            if profile is not None:
+                profiles[uid] = profile
             if results:
                 unit_results[uid] = results
             return None
@@ -496,6 +503,7 @@ class ReferenceAdapter:
             "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "streams": {sid: _state_out(st, th.ids) for sid, st in states.items()},
             "units": unit_results,
+            **({"profiles": profiles} if profiles else {}),
         }
         return SimulationResult(True, out, issues, self.name, self.version())
 
@@ -1210,6 +1218,18 @@ def _solve_distillation_column(u, inlets, outs, th, fs):
         "boilup_rate": _q(r.V[N - 1], "mol/s"),
         "iterations": _q(float(r.iterations), "1"),
         "pressure": _q(P, "Pa"),
+        _PROFILE: {
+            "axis": {"name": "stage", "unit": "1", "values": [float(j + 1) for j in range(N)]},
+            "series": {
+                "temperature": {"unit": "K", "values": list(r.T)},
+                "liquid_flow": {"unit": "mol/s", "values": list(r.L)},
+                "vapor_flow": {"unit": "mol/s", "values": list(r.V)},
+                **{f"x_{cid}": {"unit": "1", "values": [r.x[j][k] for j in range(N)]}
+                   for k, cid in enumerate(th.ids)},
+                **{f"y_{cid}": {"unit": "1", "values": [r.y[j][k] for j in range(N)]}
+                   for k, cid in enumerate(th.ids)},
+            },
+        },
     }
 
 

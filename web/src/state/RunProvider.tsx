@@ -11,6 +11,13 @@ export interface RunResults {
   timestamp?: string;
   streams: Record<string, StreamState>;
   units: Record<string, Record<string, Quantity>>;
+  /** Values along a unit, e.g. per column stage (optional). */
+  profiles?: Record<string, Profile>;
+}
+
+export interface Profile {
+  axis: { name: string; unit: string; values: number[] };
+  series: Record<string, { unit: string; values: number[] }>;
 }
 
 export type RunState =

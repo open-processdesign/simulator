@@ -92,6 +92,24 @@ class Stream(_Strict):
     state: StreamState | None = None
 
 
+class Series(_Strict):
+    unit: str
+    values: list[float]
+
+
+class Axis(_Strict):
+    name: str
+    unit: str
+    values: list[float]
+
+
+class Profile(_Strict):
+    """Values along a unit (e.g. per column stage), all series as long as the axis."""
+
+    axis: Axis
+    series: dict[str, Series] = Field(default_factory=dict)
+
+
 class Results(_Strict):
     engine: str | None = None
     engine_version: str | None = None
@@ -99,6 +117,7 @@ class Results(_Strict):
     timestamp: str | None = None
     streams: dict[str, StreamState] = Field(default_factory=dict)
     units: dict[str, dict[str, Quantity]] = Field(default_factory=dict)
+    profiles: dict[str, Profile] = Field(default_factory=dict)
 
 
 class Position(BaseModel):

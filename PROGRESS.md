@@ -108,3 +108,8 @@ Template:
 - Done: `engine/opd_engine/adapters/column.py` (bubble-point method + θ-method), `distillation_column` unit in engine, schema, models and UI (palette, spec groups, unit-set kinds, EN/TR), example `benzene-toluene-rigorous-column.opd.json`.
 - Tests: engine 94 passed — MESH residuals on every stage (component balances, y = Kx with K recomputed, summations, enthalpy balances) and overall balances; rigorous column reproduces the FUG design within a few percent (recovery, x_D, condenser duty); more reflux → purer distillate; NRTL methanol–water column; input errors. Web 50 passed; all examples solve in Pyodide (rigorous column 0.6 s).
 - PR: #16 (based on PR #15).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T16
+- Done: `results.profiles` in schema and models; rigorous column stores stage profiles; Results step shows temperature and liquid-composition charts (hover tooltip, legend, direct labels, unit sets) with a table view. Series colours validated with the dataviz palette validator (all hard checks pass; contrast WARN handled by labels + table).
+- Tests: engine 95 passed (profiles stored, schema-valid); web 51 passed (charts, table in metric units). Rendered and checked in Chrome.
+- PR: #17 (based on PR #16).

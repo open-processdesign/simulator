@@ -10,6 +10,7 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fileName } from "@/state/persistence";
 import { downloadText, resultsCsv } from "./csv";
+import { ProfileCharts } from "./ProfileChart";
 
 /** Step 5: stream table, unit results and messages of the last run. */
 export function ResultsPage() {
@@ -100,6 +101,15 @@ export function ResultsPage() {
                   ))}
                 </div>
               </section>
+
+              {run.results.profiles && Object.keys(run.results.profiles).length > 0 && (
+                <section className="flex flex-col gap-3">
+                  <h2 className="text-base font-semibold">{t("profiles.heading")}</h2>
+                  {Object.entries(run.results.profiles).map(([id, profile]) => (
+                    <ProfileCharts key={id} unitId={id} profile={profile} doc={doc} />
+                  ))}
+                </section>
+              )}
             </>
           )}
         </>

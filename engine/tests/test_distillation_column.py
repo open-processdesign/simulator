@@ -133,3 +133,20 @@ def test_column_input_errors():
     result = ENGINE.simulate(column_doc(D=150.0))  # more distillate than feed
     assert not result.converged
     assert [i.code for i in result.issues if i.severity is adapter.Severity.ERROR] == ["column_distillate_rate"]
+
+
+def test_stage_profiles_are_stored_in_the_results():
+    import jsonschema
+
+    doc = column_doc()
+    result = ENGINE.simulate(doc)
+    prof = result.document["results"]["profiles"]["T-1"]
+    assert prof["axis"]["values"] == [float(j) for j in range(1, 21)]
+    s = prof["series"]
+    assert set(s) == {"temperature", "liquid_flow", "vapor_flow", "x_benzene", "x_toluene", "y_benzene", "y_toluene"}
+    assert all(len(v["values"]) == 20 for v in s.values())
+    assert s["temperature"]["values"][0] == pytest.approx(result.document["results"]["units"]["T-1"]["top_temperature"]["value"])
+    assert s["vapor_flow"]["values"][0] == 0.0  # total condenser
+    schema = json.loads((ROOT / "schema" / "flowsheet.schema.json").read_text(encoding="utf-8"))
+    jsonschema.validate(result.document, schema)
+    assert load(result.document).results.profiles["T-1"].axis.name == "stage"

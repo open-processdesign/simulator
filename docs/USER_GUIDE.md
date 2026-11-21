@@ -11,6 +11,7 @@ Choose a property method:
 - **Ideal (Raoult)** — low pressure, similar molecules.
 - **Peng–Robinson / SRK** — hydrocarbons and gases, also at high pressure.
 - **NRTL** — polar, non-ideal liquids at low pressure (alcohol–water).
+- **UNIQUAC** — like NRTL, with molecular size and surface (r, q) from UNIFAC groups and two parameters per pair.
 
 The table shows the binary parameters and where they come from (database, your value, or missing → neutral value). You can type your own value; "use database value" undoes it.
 

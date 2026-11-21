@@ -11,6 +11,7 @@ Bir özellik yöntemi seçin:
 - **İdeal (Raoult)**: düşük basınç, benzer moleküller.
 - **Peng–Robinson / SRK**: hidrokarbonlar ve gazlar, yüksek basınçta da.
 - **NRTL**: düşük basınçta polar, ideal olmayan sıvılar (alkol–su).
+- **UNIQUAC**: NRTL gibi; molekül boyutu ve yüzeyi (r, q) UNIFAC gruplarından, çift başına iki parametre.
 
 Tablo ikili parametreleri ve kaynağını gösterir (veritabanı, sizin değeriniz veya yok → nötr değer). Kendi değerinizi yazabilirsiniz; "veritabanı değerini kullan" geri alır.
 

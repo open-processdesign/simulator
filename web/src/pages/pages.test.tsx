@@ -103,4 +103,18 @@ describe("Thermodynamics page", () => {
     await waitFor(() => expect(within(screen.getAllByRole("row")[2]).getByText("User")).toBeInTheDocument());
     expect(within(screen.getAllByRole("row")[2]).getByRole("textbox", { name: "b_ji [K] for benzene–methanol" })).toHaveValue("250.50");
   });
+
+  it("shows UNIQUAC b_ij and b_ji (no α) and the missing-pair note", async () => {
+    const doc = withComponents(["methanol", "methanol", "67-56-1"], ["water", "water", "7732-18-5"], ["benzene", "benzene", "71-43-2"]);
+    renderWithApp(<ThermoPage />, { ...doc, thermo: { package: "UNIQUAC" } });
+    expect(screen.getByRole("radio", { name: /^UNIQUAC/ })).toBeChecked();
+    expect(screen.getByText("UNIQUAC binary parameters (τ_ij = exp(b_ij / T))")).toBeInTheDocument();
+    const table = await screen.findByRole("table");
+    expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Pair", "b_ij [K]", "b_ji [K]", "Source", ""]);
+    const rows = within(table).getAllByRole("row").slice(1);
+    expect(within(rows[0]).getByRole("textbox", { name: "b_ij [K] for methanol–water" })).toHaveValue("169.65");
+    expect(within(rows[0]).getByRole("textbox", { name: "b_ji [K] for water–methanol" })).toHaveValue("-276.42");
+    expect(within(rows[1]).getByText("Missing → 0")).toBeInTheDocument();
+    expect(screen.getByText(/ChemSep UNIQUAC table/)).toBeInTheDocument();
+  });
 });

@@ -133,3 +133,9 @@ Template:
 - Done: heat-exchanger rating mode (`ua`, or `u_overall` + `area`): duty solved from Q = UA·LMTD with Brent, bounded by the no-cross maximum duty; UA option in the side panel.
 - Tests: engine 117 passed (rating with the design's UA reproduces the design outlet and duty; doubling the area raises the duty). Web 51 passed.
 - PR: #21 (based on PR #20).
+
+## 2026-11-21 — Claude (manual session) — T21
+- Done: UNIQUAC property package in the reference engine (r, q from UNIFAC groups; ChemSep UNIQUAC b_ij; user override; missing pair = ideal + warning); Thermodynamics page b_ij / b_ji table; EN/TR strings; D027; VALIDATION rows; Q5–Q7 moved to Answered.
+- Tests: engine 123 passed (new `test_uniquac.py`: methanol–water VLE at 4 points, ethanol–water azeotrope, parameter sources); web 52 passed (UNIQUAC table test).
+- PR: agent/T21-uniquac.
+- Next / blockers: HDA vs CHEMCAD validation waits for the CHEMCAD stream table; DWSIM waits for a server.

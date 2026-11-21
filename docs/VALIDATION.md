@@ -16,6 +16,8 @@ the HDA process against the maintainer's CHEMCAD case, plus two or three literat
 | Pure benzene, toluene, PR and SRK | NIST WebBook normal boiling points | T_b | 1.5 K | `test_pure_component_boiling_point` |
 | Methanol–water, NRTL, 1 atm | Experimental VLE (Perry's Handbook) at x = 0.1, 0.3, 0.5, 0.8 | T, y | 0.7 K, 0.02 | `test_nrtl.py::test_methanol_water_matches_experiment` |
 | Ethanol–water, NRTL | Azeotrope 78.15 °C at x = 0.894 (CRC) | T, direction of y − x | 0.6 K | `test_ethanol_water_minimum_boiling_azeotrope` |
+| Methanol–water, UNIQUAC, 1 atm | Same data; engine 87.49 / 77.94 / 73.01 / 67.60 °C vs 87.7 / 78.0 / 73.1 / 67.6 °C | T, y | 0.7 K, 0.02 | `test_uniquac.py::test_methanol_water_uniquac_matches_experiment` |
+| Ethanol–water, UNIQUAC | Azeotrope 78.15 °C at x = 0.894 (CRC); engine 78.82 °C | T | 0.8 K | `test_ethanol_water_azeotrope_uniquac` |
 | Water–gas shift K(T) | Moe (1962) correlation, 600–800 K | K | 6 % | `test_equilibrium_reactor.py` |
 
 ## Units

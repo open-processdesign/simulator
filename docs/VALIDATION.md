@@ -31,12 +31,19 @@ the HDA process against the maintainer's CHEMCAD case, plus two or three literat
 | HX zones, desuperheat–condense–subcool | Grid independence (1 zone + phase boundaries vs 100 zones) | UA | 0.2 % | `test_phase_change_zoned_ua_is_grid_independent…` |
 | HX internal pinch | Hand balance at the steam dew point, ideal-gas cp of steam and N2 (NIST Shomate) | minimum approach | 0.3 K | `test_internal_pinch_at_dew_point_matches_hand_balance` |
 | HX rating with phase change | Rated UA reproduces the design duty | duty | 1e-6 rel. | `test_rating_reproduces_phase_change_design` |
+| Shell-and-tube, tube side | Hand calculation, Dittus–Boelter + OU friction/return-loss model, NIST water at 300 K | v, Re, h_t, ΔP_t | 0.5 %, 1 %, 3 %, 1 % | `test_shell_and_tube.py::test_tube_side…` |
+| Shell-and-tube, shell side | Hand calculation, Kern (1950) D_e, h_s and ΔP_s, NIST water at 300 K | v, Re, h_s, ΔP_s | 0.5 %, 1 %, 3 %, 1 % | `test_shell_side…` |
+| F correction (1–2N) | Bowman et al. (1940): R = 1, P = 0.5 → 0.802; reciprocity F(R,P) = F(1/R, PR) | F | 5e-4 | `test_f_correction_reference_values` |
+| Geometry rating | U·A·F equals the zoned UA; design check at the rated outlet gives zero over-design | UA, over-design | 1e-5 | `test_rating_from_geometry…` |
 | Conversion reactor | ΔHr° of toluene HDA from formation enthalpies (≈ −42 kJ/mol) | duty | 2 % | `test_conversion_reactor…` |
 | Shortcut column | Closed-form binary Fenske and Underwood | N_min, R_min | 1e-9, 1e-4 rel. | `test_shortcut_column_binary…` |
 | Rigorous column | MESH equations on every stage; FUG design | residuals; recovery, x_D, Q_c | 1e-6; 0.03, 0.02, 5 % | `test_distillation_column.py` |
 | CSTR / PFR | First-order X = kτ/(1+kτ), X = 1 − e^(−kτ); second-order CSTR | conversion | 1e-6 rel. | `test_kinetic_reactors.py` |
 | Adiabatic PFR | Same outlet T as an adiabatic conversion reactor at equal conversion | T | 1e-3 K | `test_adiabatic_pfr…` |
 | Equilibrium reactor | K condition, element balances, Le Chatelier | composition | 1e-7 rel. | `test_equilibrium_reactor.py` |
+| Liquid equilibrium, ideal A ⇌ B | x_B/x_A = K_a; formation route K_a = K_ig·Psat_A/Psat_B | ratio | 1e-6 rel. | `test_liquid_equilibrium.py::test_ideal_isomerisation…` |
+| MTBE K_a(T) from formation data | ln K = 4703/T − 10.3 (Izquierdo et al., via Badia et al. 2016); ΔrH° = −37 ± 10 kJ/mol | ln K, ΔrH° | 0.45, 10 kJ/mol | `test_mtbe_k_from_formation_data_vs_literature` |
+| MTBE, NRTL liquid | Π(x γ)^ν = K_a with γ from the model | K_a | 1e-6 rel. | `test_nrtl_outlet_satisfies_activity_mass_action` |
 | Recycle loops | Analytic R = rF/(1 − r); once-through duties | flows, duties | 1e-6 rel. | `test_recycle.py` |
 
 ## Browser engine

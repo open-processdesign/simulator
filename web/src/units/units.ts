@@ -7,7 +7,8 @@ export const UNIT_SETS: UnitSet[] = ["SI", "METRIC", "ENGLISH"];
 
 export type Kind =
   | "temperature" | "temperature_difference" | "pressure" | "pressure_difference"
-  | "molar_flow" | "power" | "ua" | "fraction" | "number" | "volume" | "time" | "molar_energy";
+  | "molar_flow" | "power" | "ua" | "fraction" | "number" | "volume" | "time" | "molar_energy"
+  | "length" | "diameter" | "area" | "htc" | "fouling" | "velocity" | "conductivity";
 
 type Conversion = { unit: string; toDisplay: (si: number) => number; fromDisplay: (v: number) => number; digits: number };
 
@@ -35,6 +36,13 @@ const TABLE: Record<Kind, Record<UnitSet, Conversion>> = {
   time: { SI: id("s", 2), METRIC: id("s", 2), ENGLISH: id("s", 2) },
   molar_energy: { SI: id("J/mol", 0), METRIC: scale("kJ/mol", 1e-3, 3), ENGLISH: scale("Btu/lbmol", 0.429922614, 1) },
   fraction: { SI: id("–", 4), METRIC: id("–", 4), ENGLISH: id("–", 4) },
+  length: { SI: id("m", 3), METRIC: id("m", 3), ENGLISH: scale("ft", 3.280839895, 3) },
+  diameter: { SI: id("m", 4), METRIC: scale("mm", 1e3, 2), ENGLISH: scale("in", 39.37007874, 3) },
+  area: { SI: id("m²", 2), METRIC: id("m²", 2), ENGLISH: scale("ft²", 10.76391042, 1) },
+  htc: { SI: id("W/(m²·K)", 1), METRIC: id("W/(m²·K)", 1), ENGLISH: scale("Btu/(h·ft²·°F)", 0.1761101838, 2) },
+  fouling: { SI: id("m²·K/W", 6), METRIC: id("m²·K/W", 6), ENGLISH: scale("h·ft²·°F/Btu", 5.678263341, 5) },
+  velocity: { SI: id("m/s", 3), METRIC: id("m/s", 3), ENGLISH: scale("ft/s", 3.280839895, 3) },
+  conductivity: { SI: id("W/(m·K)", 2), METRIC: id("W/(m·K)", 2), ENGLISH: scale("Btu/(h·ft·°F)", 0.5777893165, 2) },
   number: { SI: id("–", 2), METRIC: id("–", 2), ENGLISH: id("–", 2) },
 };
 
@@ -49,6 +57,29 @@ const KIND_BY_NAME: Record<string, Kind> = {
   minimum_approach: "temperature_difference",
   mean_temperature_difference: "temperature_difference",
   zones: "number",
+  area: "area",
+  u_overall: "htc",
+  h_tube: "htc",
+  h_shell: "htc",
+  velocity_tube: "velocity",
+  velocity_shell: "velocity",
+  reynolds_tube: "number",
+  reynolds_shell: "number",
+  pressure_drop_tube: "pressure_difference",
+  pressure_drop_shell: "pressure_difference",
+  f_correction: "number",
+  overdesign: "fraction",
+  baffles: "number",
+  tube_outer_diameter: "diameter",
+  tube_inner_diameter: "diameter",
+  pitch: "diameter",
+  tube_length: "length",
+  shell_inner_diameter: "length",
+  baffle_spacing: "length",
+  tube_count: "number",
+  wall_conductivity: "conductivity",
+  fouling_tube: "fouling",
+  fouling_shell: "fouling",
   pressure: "pressure",
   pressure_drop: "pressure_difference",
   pressure_increase: "pressure_difference",

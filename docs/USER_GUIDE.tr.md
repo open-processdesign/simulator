@@ -38,4 +38,8 @@ Sağ üstte birim seti (SI, Metrik, İngiliz) ve dil (English, Türkçe) seçili
 ## Mevcut üniteler
 Besleme, ürün, karıştırıcı, ayırıcı, flaş, ısıtıcı/soğutucu, ısı değiştirici, vana, pompa, kompresör, dönüşüm reaktörü, CSTR, PFR, denge reaktörü, kısa yol kolonu (FUG), distilasyon kolonu (rigorous). Geri döngüler otomatik çözülür.
 
+**Denge reaktörü.** Tepkime fazını seçin (gaz veya sıvı). K oluşum verilerinden ya da kendi korelasyonunuzdan (ln K = a + b/T + c·ln T, ör. bir makaleden) gelir. Sıvı fazda aktiflikler saf sıvıya göre x·γ'dır; polar karışımlar için NRTL veya UNIQUAC kullanın. Örnek: *MTBE synthesis*.
+
+**Gövde-boru geometrisi.** Isı değiştiricinin yan panelinde *Gövde-boru geometrisi*ni açın; boru sayısı, geçiş, pitch, gövde çapı, şaşırtma aralığı ve kirlilik değerlerini girin. Kern yöntemi film katsayılarını, U'yu, alanı ve iki basınç düşümünü verir (siz vermediyseniz çıkışlara uygulanır). Değiştiriciyi değerlendirmek için ısıl spesifikasyonu boş bırakın; fazla tasarımı görmek için çıkış sıcaklığı veya görev verin. Örnek: *Toluene cooler*.
+
 **Isı değiştirici bölgeleri.** Değiştirici görevini bölgelere ayırır (varsayılan 10, yan panel → *Bölge analizi*) ve içindeki her kabarcık/çiğ noktasına bir bölge sınırı ekler. UA bölgelerin toplamıdır, *en küçük yaklaşma* iç pinch noktasıdır; Sonuçlar sayfası T–Q ısı eğrilerini çizer. Uçlar sorunsuz görünse bile değiştiricinin içindeki sıcaklık kesişmesi bildirilir. Örnek: *Steam-heated vaporizer*.

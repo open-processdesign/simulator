@@ -1,4 +1,4 @@
-"""Gas-phase equilibrium reactor (T18).
+"""Equilibrium reactor: gas phase (T18) and liquid phase (T23).
 
 For each reaction k, the equilibrium constant follows from standard ideal-gas formation
 properties (P° = 1 bar):
@@ -9,6 +9,13 @@ properties (P° = 1 bar):
 and the outlet satisfies Σ_i ν_ik ln(y_i φ_i P / P°) = ln K_k(T) for every reaction, with φ_i
 from the gas model of the property package (φ = 1 for Ideal and NRTL). Smith, Van Ness &
 Abbott, *Introduction to Chemical Engineering Thermodynamics*, ch. 14.
+
+Liquid phase (T23): the reaction proceeds in a liquid of mole fractions x and the condition
+is Σ_i ν_ik ln a_i = ln K_a,k with activities a_i = f_i / f_i° relative to the pure liquid at
+T and P (f from the liquid model of the property package: x γ Psat for Ideal, NRTL and
+UNIQUAC, x φ^L P for PR and SRK). From formation data, K_a = K · Π (P°/f_i°)^ν_i, i.e. the
+ideal-gas K moved to the pure-liquid standard state. Instead of formation data, a reaction
+may give its own ln K = a + b/T + c·ln T on the phase's standard state.
 
 One reaction is solved by bisection on its extent (always bracketed by the bounds that keep
 all flows non-negative); several reactions by `scipy.optimize.least_squares` started from
@@ -57,11 +64,49 @@ def _extent_bounds(flows: list[float], nu: list[float]) -> tuple[float, float]:
     return lo, hi
 
 
+_PURE = 1e-10  # other components' fraction when evaluating a pure-liquid fugacity
+
+
+def correlation_ln_k(c: dict[str, float], T: float) -> float:
+    """ln K = a + b/T + c·ln T (user correlation)."""
+    return float(c.get("a", 0.0)) + float(c.get("b", 0.0)) / T + float(c.get("c", 0.0)) * math.log(T)
+
+
+def pure_liquid_ln_f(th: Any, T: float, P: float) -> list[float]:
+    """ln f_i° (Pa) of each pure liquid at T, P from the package's liquid model."""
+    liq = th.flasher.liquid
+    n = len(th.ids)
+    out = []
+    for i in range(n):
+        if n == 1:
+            zs = [1.0]
+        else:
+            zs = [_PURE / (n - 1)] * n
+            zs[i] = 1.0 - _PURE
+        out.append(liq.to(T=T, P=P, zs=zs).lnphis()[i] + math.log(P))
+    return out
+
+
+def phase_ln_k(th: Any, nu: list[float], T: float, P: float, phase: str,
+               correlation: dict[str, float] | None) -> float:
+    """ln K on the standard state of the reacting phase (ideal gas at P°, or pure liquid)."""
+    if correlation is not None:
+        return correlation_ln_k(correlation, T)
+    lk = ln_k(th, nu, T)
+    if phase == "liquid":
+        lk -= sum(n * (lf - math.log(P_REF)) for n, lf in zip(nu, pure_liquid_ln_f(th, T, P)) if n)
+    return lk
+
+
 def solve_equilibrium(th: Any, nus: list[list[float]], flows_in: list[float], P: float,
-                      T: float) -> list[float]:
-    """Extents (mol/s) at temperature T and pressure P."""
-    gas = th.flasher.gas
-    lnKs = [ln_k(th, nu, T) for nu in nus]
+                      T: float, phase: str = "gas",
+                      correlations: list[dict[str, float] | None] | None = None) -> list[float]:
+    """Extents (mol/s) at temperature T and pressure P in the given phase."""
+    model = th.flasher.gas if phase == "gas" else th.flasher.liquid
+    correlations = correlations or [None] * len(nus)
+    lnKs = [phase_ln_k(th, nu, T, P, phase, c) for nu, c in zip(nus, correlations)]
+    # ln a_i = ln(z_i φ_i P) − ln f_i°, with f_i° = P° (gas) or the pure liquid (liquid).
+    ref = [math.log(P_REF)] * len(flows_in) if phase == "gas" else pure_liquid_ln_f(th, T, P)
 
     def flows_of(xi: list[float]) -> list[float]:
         return [f + sum(nu[i] * x for nu, x in zip(nus, xi)) for i, f in enumerate(flows_in)]
@@ -70,8 +115,8 @@ def solve_equilibrium(th: Any, nus: list[list[float]], flows_in: list[float], P:
         flows = [max(f, _EPS * max(sum(flows_in), 1.0)) for f in flows_of(xi)]
         F = sum(flows)
         y = [f / F for f in flows]
-        lnphi = gas.to(T=T, P=P, zs=y).lnphis()
-        lna = [math.log(yi) + lp + math.log(P / P_REF) for yi, lp in zip(y, lnphi)]
+        lnphi = model.to(T=T, P=P, zs=y).lnphis()
+        lna = [math.log(yi) + lp + math.log(P) - r for yi, lp, r in zip(y, lnphi, ref)]
         return [sum(n * a for n, a in zip(nu, lna)) - lk for nu, lk in zip(nus, lnKs)]
 
     def single(k: int, base: list[float]) -> float:

@@ -146,3 +146,26 @@ Template:
 - PR: #24 (agent/T22-zoned-hx).
 - Next / blockers: liquid-phase equilibrium reactor; HDA vs CHEMCAD waits for the CHEMCAD stream table; DWSIM waits for a server.
 
+## 2026-11-21 — Claude (manual session) — T23
+- Done: liquid-phase equilibrium reactor (activities vs pure liquid, all packages), user ln K correlation per reaction, phase-mismatch warning, UI (phase, K source, a/b/c), example `mtbe-liquid-equilibrium`, UNIQUAC zero-fraction fix, D029, VALIDATION rows, user guide.
+- Tests: engine 148 passed (new `test_liquid_equilibrium.py`); web 55 passed.
+- PR: agent/T23-liquid-equilibrium.
+- Next: T24 shell-and-tube geometry.
+
+## 2026-11-21 — Claude (manual session) — T24
+- Done: shell-and-tube geometry (Kern) in the engine, rating and design-check modes, F factor, computed pressure drops, warnings (two-phase side, low F), UI geometry editor with new unit kinds (length, diameter, area, U, fouling, velocity, conductivity), example `toluene-cooler-shell-and-tube`, D030, VALIDATION rows, user guide.
+- Tests: engine 161 passed (new `test_shell_and_tube.py`); web 56 passed.
+- PR: agent/T24-shell-and-tube (stacked on T23).
+- Next: T25/T26 literature validation cases.
+
+## 2026-11-21 — Claude (manual session) — T25, T26
+- Done: literature validation cases from Turton's published CHEMCAD stream tables — cumene Unit 800 (E-801, H-801, R-801, E-802 duties within 3 %, flash split within 0.6 %) and DME Unit 200 (adiabatic reactor +2.6 K with PR; methanol–water let-downs within 0.3 K); examples, tests, VALIDATION section with deviations and a known gap (missing DME NRTL pairs); D031.
+- Tests: engine 178 passed (new `test_literature_cases.py`); web 56 passed.
+- PR: agent/T25-literature-cases (stacked on T24).
+- Next: T27 HDA template.
+
+## 2026-11-21 — Claude (manual session) — T27
+- Done: HDA plant template (Turton topology, two recycles, converges in 13 Wegstein iterations / ~4 s); solver robustness (bubble/dew and P–H fallbacks, negative-flow guard for Wegstein, clipped round-off negatives, loop flash errors as issues, column D limit inside loops); VALIDATION sanity table vs Turton; Q8 for the CHEMCAD case; D032.
+- Tests: engine 184 passed (new `test_hda_template.py`); web 56 passed.
+- PR: agent/T27-hda-template (stacked on T25).
+- Next: T28 release (demo video, CHANGELOG).

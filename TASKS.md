@@ -34,7 +34,13 @@ Night sessions until the demo (Mon/Wed/Sat): 21, 23, 25, 28, 30 Nov · 2, 5, 7, 
 | T19 | **Docs (M3 start).** CONTRIBUTING, code of conduct, user guide (EN/TR), docs/VALIDATION.md listing every model check with reference and tolerance; README updated. | – | done |
 | T20 | **Heat-exchanger rating.** Given UA (or U and area), the exchanger finds its duty from Q = UA·LMTD (counter-current) instead of a fixed outlet; UA option in the side panel. | T09 | done |
 | T21 | **UNIQUAC property package.** UNIQUAC liquid (user values → ChemSep UNIQUAC table → missing = ideal with warning), r/q from UNIFAC groups; UI binary table (b_ij, b_ji). | T12 | done |
-| T22 | **Zoned heat exchanger.** Equal-duty zones + bubble/dew boundaries; zoned UA, internal pinch and cross; rating on zoned UA; T–Q curves on the Results page. | T20 | review (PR #24) |
+| T22 | **Zoned heat exchanger.** Equal-duty zones + bubble/dew boundaries; zoned UA, internal pinch and cross; rating on zoned UA; T–Q curves on the Results page. | T20 | done |
+| T23 | **Liquid-phase equilibrium reactor.** Activities against the pure liquid; user ln K correlations; phase-mismatch warning; MTBE example. | T18 | review |
+| T24 | **Shell-and-tube geometry (Kern).** Optional geometry → area, film coefficients, U, pressure drops. | T22 | review (PR #26) |
+| T25 | **Literature validation case 1:** cumene Unit 800 (Turton, CHEMCAD table). | – | review |
+| T26 | **Literature validation case 2:** DME Unit 200 (Turton, CHEMCAD table). | – | review |
+| T27 | **HDA template from the literature base case** (swap to CHEMCAD numbers when available, Q8). | – | review |
+| T28 | **v0.1 release:** demo video, CHANGELOG, final docs check. | T23–T27 | todo |
 
 ## After the demo — DWSIM engine (needs a host, see D012; IDs T90+ so they never clash with new tasks)
 | ID | Task | Depends | Status |
@@ -44,6 +50,5 @@ Night sessions until the demo (Mon/Wed/Sat): 21, 23, 25, 28, 30 Nov · 2, 5, 7, 
 
 ## M2 / M3 — later (to be detailed after the demo)
 - Done in M2: rigorous column (T14), kinetic reactors (T17), equilibrium reactor (T18), HX rating (T20), unit sets, CSV export, docs (T19), UNIQUAC (T21), zoned HX (T22).
-- Open: liquid-phase equilibrium reactor.
 - Validation: HDA vs. CHEMCAD (needs Berkay's CHEMCAD stream table), methanol synthesis, cumene.
 - Demo video.

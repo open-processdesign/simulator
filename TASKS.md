@@ -33,7 +33,8 @@ Night sessions until the demo (Mon/Wed/Sat): 21, 23, 25, 28, 30 Nov · 2, 5, 7, 
 | T18 | **Equilibrium reactor (M2).** Gas-phase chemical equilibrium with K(T) from formation data (+ fugacity coefficients); one or more reactions; isothermal or adiabatic; checks vs. WGS correlation and equilibrium conditions. | T17 | done |
 | T19 | **Docs (M3 start).** CONTRIBUTING, code of conduct, user guide (EN/TR), docs/VALIDATION.md listing every model check with reference and tolerance; README updated. | – | done |
 | T20 | **Heat-exchanger rating.** Given UA (or U and area), the exchanger finds its duty from Q = UA·LMTD (counter-current) instead of a fixed outlet; UA option in the side panel. | T09 | done |
-| T21 | **UNIQUAC property package.** UNIQUAC liquid (user values → ChemSep UNIQUAC table → missing = ideal with warning), r/q from UNIFAC groups; UI binary table (b_ij, b_ji). | T12 | review (agent/T21-uniquac) |
+| T21 | **UNIQUAC property package.** UNIQUAC liquid (user values → ChemSep UNIQUAC table → missing = ideal with warning), r/q from UNIFAC groups; UI binary table (b_ij, b_ji). | T12 | done |
+| T22 | **Zoned heat exchanger.** Equal-duty zones + bubble/dew boundaries; zoned UA, internal pinch and cross; rating on zoned UA; T–Q curves on the Results page. | T20 | review (PR #24) |
 
 ## After the demo — DWSIM engine (needs a host, see D012; IDs T90+ so they never clash with new tasks)
 | ID | Task | Depends | Status |
@@ -42,7 +43,7 @@ Night sessions until the demo (Mon/Wed/Sat): 21, 23, 25, 28, 30 Nov · 2, 5, 7, 
 | T91 | **DWSIM adapter + engine service.** OPD → DWSIM translation, run, map results back; separate service behind the adapter interface. Shadow-compare with `reference`. | T90 | todo |
 
 ## M2 / M3 — later (to be detailed after the demo)
-- Done in M2: rigorous column (T14), kinetic reactors (T17), equilibrium reactor (T18), HX rating (T20), unit sets, CSV export, docs (T19), UNIQUAC (T21).
-- Open: zoned / phase-change heat exchanger; liquid-phase equilibrium reactor.
+- Done in M2: rigorous column (T14), kinetic reactors (T17), equilibrium reactor (T18), HX rating (T20), unit sets, CSV export, docs (T19), UNIQUAC (T21), zoned HX (T22).
+- Open: liquid-phase equilibrium reactor.
 - Validation: HDA vs. CHEMCAD (needs Berkay's CHEMCAD stream table), methanol synthesis, cumene.
 - Demo video.

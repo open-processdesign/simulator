@@ -37,3 +37,5 @@ Top right: unit set (SI, Metric, English) and language (English, Türkçe). File
 
 ## Units available
 Feed, product, mixer, splitter, flash, heater/cooler, heat exchanger, valve, pump, compressor, conversion reactor, CSTR, PFR, equilibrium reactor, shortcut column (FUG), distillation column (rigorous). Recycle loops are solved automatically.
+
+**Heat exchanger zones.** The exchanger splits its duty into zones (default 10, side panel → *Zone analysis*) and adds a zone boundary at every bubble or dew point inside it. UA is the sum over the zones, the *minimum approach* is the internal pinch, and the Results page draws the T–Q heat curves. A temperature cross inside the exchanger is reported even when both ends look fine. Example: *Steam-heated vaporizer*.

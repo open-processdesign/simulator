@@ -76,6 +76,7 @@ function UnitPanel({ unit, issues, onDeleted }: { unit: Unit; issues: EngineIssu
       {unit.type === "shortcut_column" && <KeysEditor unit={unit} />}
       {(unit.type === "cstr" || unit.type === "pfr") && <KineticsEditor unit={unit} />}
       {unit.type === "equilibrium_reactor" && <EquilibriumEditor unit={unit} />}
+      {unit.type === "heat_exchanger" && <ZonesEditor unit={unit} />}
 
       {own && (
         <section className="flex flex-col gap-1">
@@ -436,6 +437,29 @@ function EquilibriumEditor({ unit }: { unit: Unit }) {
       <Button variant="secondary" size="sm" onClick={() => save([...reactions, { stoichiometry: {} }])}>
         {t("flowsheet.add_reaction")}
       </Button>
+    </fieldset>
+  );
+}
+
+/** Number of equal-duty zones of a heat exchanger (engine default 10; phase changes add zones). */
+function ZonesEditor({ unit }: { unit: Unit }) {
+  const { t } = useTranslation();
+  const { dispatch } = useFlowsheet();
+  const zones = unit.options?.zones as number | undefined;
+  return (
+    <fieldset className="flex flex-col gap-2 rounded-md border border-border bg-surface p-3">
+      <legend className="px-1 text-sm font-semibold">{t("flowsheet.zone_analysis")}</legend>
+      <label className="flex items-center justify-between gap-2 text-sm text-muted">
+        {t("flowsheet.specs.zones")}
+        <input type="number" min={1} max={100} step={1} inputMode="numeric" placeholder="10"
+          value={zones ?? ""}
+          onChange={(e) => {
+            const v = e.target.value === "" ? undefined : Math.round(Number(e.target.value));
+            dispatch({ type: "set_options", id: unit.id, options: { zones: v !== undefined && Number.isFinite(v) ? v : undefined } });
+          }}
+          className="num h-7 w-[11.5rem] rounded-sm border border-border-strong bg-surface px-2 text-right text-sm text-text" />
+      </label>
+      <p className="text-xs text-muted">{t("flowsheet.zones_hint")}</p>
     </fieldset>
   );
 }

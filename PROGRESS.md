@@ -139,3 +139,10 @@ Template:
 - Tests: engine 123 passed (new `test_uniquac.py`: methanol–water VLE at 4 points, ethanol–water azeotrope, parameter sources); web 52 passed (UNIQUAC table test).
 - PR: agent/T21-uniquac.
 - Next / blockers: HDA vs CHEMCAD validation waits for the CHEMCAD stream table; DWSIM waits for a server.
+
+## 2026-11-21 — Claude (manual session) — T22
+- Done: zoned heat exchanger (equal-duty zones + bubble/dew boundaries, zoned UA, internal pinch, internal cross error, rating on zoned UA, T–Q profile); pure-component-in-mixture flash fix; side-panel zone count; T–Q chart and table on the Results page; example `steam-vaporizer-zones` (zoned UA 26 % above the end-LMTD estimate); D028; VALIDATION rows; user guide EN/TR.
+- Tests: engine 134 passed (new `test_heat_exchanger_zones.py`); web 54 passed (heat curves, zone editor).
+- PR: #24 (agent/T22-zoned-hx).
+- Next / blockers: liquid-phase equilibrium reactor; HDA vs CHEMCAD waits for the CHEMCAD stream table; DWSIM waits for a server.
+

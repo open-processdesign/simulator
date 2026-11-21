@@ -25,6 +25,10 @@ export function ProfileCharts({ unitId, profile, doc }: { unitId: string; profil
     .filter((c): c is { id: string; name: string; color: string; values: number[] } => !!c.values)
     .slice(0, 8);
 
+  if (profile.series.hot_temperature && profile.series.cold_temperature) {
+    return <HeatCurves unitId={unitId} profile={profile} duties={stages} axisLabel={axisLabel} />;
+  }
+
   return (
     <section aria-label={t("profiles.title", { id: unitId })} className="flex flex-col gap-2 rounded-md border border-border bg-surface p-3">
       <div className="flex items-center justify-between">
@@ -81,6 +85,65 @@ export function ProfileCharts({ unitId, profile, doc }: { unitId: string; profil
         </div>
       )}
       {isStage && <p className="text-xs text-subtle">{t("profiles.note")}</p>}
+    </section>
+  );
+}
+
+/** Heat-exchanger T–Q diagram: hot and cold curves against duty from the cold end, one y-axis. */
+function HeatCurves({ unitId, profile, duties, axisLabel }: { unitId: string; profile: Profile; duties: number[]; axisLabel: string }) {
+  const { t, i18n } = useTranslation();
+  const units = useUnits();
+  const [table, setTable] = useState(false);
+  const lang = i18n.resolvedLanguage;
+  const hot = profile.series.hot_temperature.values.map((v) => units.toDisplay("temperature", v));
+  const cold = profile.series.cold_temperature.values.map((v) => units.toDisplay("temperature", v));
+  const dts = profile.series.hot_temperature.values.map((v, j) => units.toDisplay("lmtd", v - profile.series.cold_temperature.values[j]));
+  const tUnit = units.unit("temperature");
+  return (
+    <section aria-label={t("profiles.title", { id: unitId })} className="flex flex-col gap-2 rounded-md border border-border bg-surface p-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold"><span className="num">{unitId}</span> · {t("profiles.title_heat")}</h3>
+        <button type="button" className="text-xs text-accent hover:underline" onClick={() => setTable((v) => !v)}>
+          {table ? t("profiles.show_chart") : t("profiles.show_table")}
+        </button>
+      </div>
+      {table ? (
+        <div className="max-h-80 overflow-auto">
+          <table className="w-full text-xs">
+            <thead className="sticky top-0 bg-surface-muted text-muted">
+              <tr>
+                <th className="px-2 py-1 text-left font-medium">{axisLabel}</th>
+                <th className="px-2 py-1 text-right font-medium">{t("flowsheet.specs.hot_temperature")} [{tUnit}]</th>
+                <th className="px-2 py-1 text-right font-medium">{t("flowsheet.specs.cold_temperature")} [{tUnit}]</th>
+                <th className="px-2 py-1 text-right font-medium">{t("profiles.delta_t")} [{units.unit("lmtd")}]</th>
+              </tr>
+            </thead>
+            <tbody>
+              {duties.map((q, j) => (
+                <tr key={j} className="border-t border-border">
+                  <td className="num px-2 py-0.5">{formatNumber(q, lang, 4)}</td>
+                  <td className="num px-2 py-0.5 text-right">{formatNumber(hot[j], lang, 2)}</td>
+                  <td className="num px-2 py-0.5 text-right">{formatNumber(cold[j], lang, 2)}</td>
+                  <td className="num px-2 py-0.5 text-right">{formatNumber(dts[j], lang, 2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <LineChart
+          title={`${t("flowsheet.specs.temperature")} [${tUnit}]`}
+          stages={duties}
+          series={[
+            { id: "hot", name: t("flowsheet.specs.hot_temperature"), color: "var(--opd-series-1)", values: hot },
+            { id: "cold", name: t("flowsheet.specs.cold_temperature"), color: "var(--opd-series-2)", values: cold },
+          ]}
+          digits={2}
+          lang={lang}
+          stageLabel={axisLabel}
+        />
+      )}
+      <p className="text-xs text-subtle">{t("profiles.heat_note")}</p>
     </section>
   );
 }

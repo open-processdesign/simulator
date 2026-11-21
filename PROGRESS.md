@@ -57,3 +57,9 @@ Template:
 - Tests: engine 51 passed; web 30 passed (editing reducer, palette, side panel, issues). End-to-end in Chrome with the real engine: feed → flash → two products drawn by mouse, specs entered, all status dots green.
 - PR: #7 (based on PR #6).
 - Next: T07 (Run + Results).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T07
+- Done: Run button (top bar + Run + Results steps), Run step (counts, property method, what is missing with links), Results step (status, stale warning, messages, stream table, unit results), stream table under the canvas after a run, phase-coloured streams, solved status dots, shared selection so results/messages jump to the unit or stream on the canvas. EN/TR strings.
+- Tests: web 33 passed (run → table/units/messages, stale after edit, failed run with links, run page). End-to-end in Chrome with the real engine: flash drum drawn by mouse and run in 32–40 ms; numbers equal native CPython (S2 x_benzene 0.6211, S3 0.4057, F-1 duty 1 653 369 W).
+- PR: #8 (based on PR #7).
+- Next: T08 (recycle loops) or T10 (save/load + deploy).

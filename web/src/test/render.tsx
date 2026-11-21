@@ -5,6 +5,8 @@ import type { EngineClient } from "@/engine/client";
 import type { BinaryParameterRow, EngineIssue } from "@/engine/bootstrap";
 import type { Flowsheet } from "@/opd/types";
 import { FlowsheetProvider } from "@/state/FlowsheetProvider";
+import { RunProvider } from "@/state/RunProvider";
+import { SelectionProvider } from "@/state/SelectionProvider";
 
 /** k_ij database used by the fake engine: benzene–toluene has no entry (as in ChemSep). */
 const FAKE_DB: Record<string, number> = { "74-82-8|124-38-9": 0.0978 };
@@ -42,7 +44,11 @@ export function fakeEngine(validate: (doc: Flowsheet) => EngineIssue[] = () => [
 export function renderWithApp(ui: ReactNode, initial?: Flowsheet, engine: () => EngineClient = fakeEngine) {
   return render(
     <EngineProvider create={engine}>
-      <FlowsheetProvider initial={initial}>{ui}</FlowsheetProvider>
+      <FlowsheetProvider initial={initial}>
+        <RunProvider>
+          <SelectionProvider>{ui}</SelectionProvider>
+        </RunProvider>
+      </FlowsheetProvider>
     </EngineProvider>,
   );
 }

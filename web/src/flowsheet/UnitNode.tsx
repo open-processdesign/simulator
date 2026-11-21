@@ -6,11 +6,13 @@ import { unitDef } from "./catalog";
 import { CATEGORY_COLOR, UNIT_ICONS } from "./icons";
 import type { UnitStatus } from "./useIssues";
 
-export type UnitNodeData = { unitType: string; label?: string; status: UnitStatus };
+export type NodeStatus = UnitStatus | "solved";
+export type UnitNodeData = { unitType: string; label?: string; status: NodeStatus };
 export type UnitNodeType = Node<UnitNodeData, "unit">;
 
-const STATUS_DOT: Record<UnitStatus, string> = {
-  ok: "bg-ok",
+const STATUS_DOT: Record<NodeStatus, string> = {
+  solved: "bg-ok",
+  ok: "bg-surface ring-1 ring-ok",
   missing: "bg-warn",
   error: "bg-error",
   unknown: "bg-border-strong",

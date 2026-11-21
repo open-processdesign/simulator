@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { LANGUAGES, rememberLanguage, type Language } from "@/i18n";
 import { WorkflowNav } from "@/components/WorkflowNav";
 import { EngineStatus } from "@/components/EngineStatus";
+import { RunButton } from "@/results/RunButton";
 import type { Step } from "@/steps";
 
 interface TopBarProps {
@@ -22,8 +23,9 @@ export function TopBar({ step, onStepChange }: TopBarProps) {
 
       <WorkflowNav current={step} onChange={onStepChange} />
 
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-4">
         <EngineStatus />
+        <RunButton size="sm" />
       </div>
 
       <label className="flex items-center gap-2 text-sm text-muted">

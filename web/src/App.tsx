@@ -5,6 +5,8 @@ import { StepPage } from "@/pages/StepPage";
 import { ComponentsPage } from "@/pages/ComponentsPage";
 import { ThermoPage } from "@/pages/ThermoPage";
 import { FlowsheetPage } from "@/flowsheet/FlowsheetPage";
+import { RunPage } from "@/results/RunPage";
+import { ResultsPage } from "@/results/ResultsPage";
 import { stepFromHash, type Step } from "@/steps";
 
 export function App() {
@@ -24,6 +26,8 @@ export function App() {
         {step === "components" ? <ComponentsPage />
           : step === "thermo" ? <ThermoPage />
           : step === "flowsheet" ? <FlowsheetPage />
+          : step === "run" ? <RunPage />
+          : step === "results" ? <ResultsPage />
           : <StepPage step={step} />}
       </main>
       <footer className="border-t border-border bg-surface-muted px-4 py-1.5 text-xs text-muted">

@@ -1,18 +1,29 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import {
   Background, Controls, MarkerType, ReactFlow, ReactFlowProvider, useReactFlow,
-  type Connection, type Edge, type NodeChangeset, type EdgeChangeset, type OnSelectionChangeParams,
+  type Connection, type Edge, type NodeChangeset, type EdgeChangeset,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useTranslation } from "react-i18next";
 import { useFlowsheet } from "@/state/FlowsheetProvider";
 import { canConnect } from "@/state/flowsheet";
 import { Palette, DRAG_TYPE } from "./Palette";
-import { SidePanel, type Selection } from "./SidePanel";
+import { SidePanel } from "./SidePanel";
+import { useSelection } from "@/state/SelectionProvider";
+import { useRun } from "@/state/RunProvider";
+import { StreamTable } from "@/results/StreamTable";
 import { UnitNode, type UnitNodeType } from "./UnitNode";
 import { unitStatus, useIssues } from "./useIssues";
 
 const NODE_TYPES = { unit: UnitNode };
+
+/** Stream colour by phase after a run (DESIGN_SYSTEM.md: meaningful colour only). */
+function phaseStyle(state: { vapor_fraction?: { value: number }; molar_flow?: { value: number } } | undefined) {
+  if (!state?.vapor_fraction || !state.molar_flow?.value) return undefined;
+  const vf = state.vapor_fraction.value;
+  const color = vf >= 1 - 1e-9 ? "var(--opd-phase-vapor)" : vf <= 1e-9 ? "var(--opd-phase-liquid)" : "var(--opd-phase-mixed)";
+  return { stroke: color, strokeWidth: 2 };
+}
 
 /** Step 3: palette | canvas | side panel (DESIGN_SYSTEM.md → Layout). State = OPD document. */
 export function FlowsheetPage() {
@@ -29,7 +40,9 @@ function FlowsheetEditor() {
   const issues = useIssues(doc);
   const flow = useReactFlow();
   const wrapper = useRef<HTMLDivElement>(null);
-  const [selection, setSelection] = useState<Selection>(null);
+  const { selection, setSelection } = useSelection();
+  const { run, stale } = useRun();
+  const results = run.state === "done" && !stale ? run.results : null;
 
   // React Flow keeps its own node/edge arrays (drag positions, selection, sizes);
   // they are rebuilt from the OPD document whenever the document changes.
@@ -45,7 +58,12 @@ function FlowsheetEditor() {
           id: u.id,
           type: "unit",
           position: doc.layout?.[u.id] ?? old?.position ?? { x: 80 + 160 * i, y: 120 },
-          data: { unitType: u.type, label: u.label, status: unitStatus(u.id, doc, issues) },
+          selected: selection?.kind === "unit" && selection.id === u.id,
+          data: {
+            unitType: u.type,
+            label: u.label,
+            status: results && unitStatus(u.id, doc, issues) === "ok" ? "solved" : unitStatus(u.id, doc, issues),
+          },
         } as UnitNodeType;
       }),
     );
@@ -61,11 +79,15 @@ function FlowsheetEditor() {
           targetHandle: s.to.port,
           label: s.id,
           type: "smoothstep",
+          selected: selection?.kind === "stream" && selection.id === s.id,
+          style: selection?.kind === "stream" && selection.id === s.id
+            ? { stroke: "var(--opd-accent)", strokeWidth: 2.5 }
+            : phaseStyle(results?.streams[s.id]),
           markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
         };
       }),
     );
-  }, [doc, issues]);
+  }, [doc, issues, results, selection]);
 
   const onNodesChange = useCallback((changes: NodeChangeset<UnitNodeType>) => setNodes((n) => changes.applyTo(n)), []);
   const onEdgesChange = useCallback((changes: EdgeChangeset<Edge>) => setEdges((e) => changes.applyTo(e)), []);
@@ -105,16 +127,13 @@ function FlowsheetEditor() {
     addUnit(unitType, { x: p.x - 56, y: p.y - 32 });
   };
 
-  const onSelectionChange = useCallback(({ nodes: n, edges: e }: OnSelectionChangeParams) => {
-    setSelection(n[0] ? { kind: "unit", id: n[0].id } : e[0] ? { kind: "stream", id: e[0].id } : null);
-  }, []);
-
   const empty = useMemo(() => doc.units.length === 0, [doc.units.length]);
 
   return (
     <div className="flex h-full min-h-0">
       <h1 className="sr-only">{t("pages.flowsheet.title")}</h1>
       <Palette onAdd={(type) => addUnit(type)} />
+      <div className="flex min-w-0 flex-1 flex-col">
       <div
         ref={wrapper}
         aria-label={t("flowsheet.canvas_label")}
@@ -138,7 +157,9 @@ function FlowsheetEditor() {
           isValidConnection={isValidConnection}
           onNodesDelete={(deleted) => deleted.forEach((n) => dispatch({ type: "remove_unit", id: n.id }))}
           onEdgesDelete={(deleted) => deleted.forEach((e) => dispatch({ type: "remove_stream", id: e.id }))}
-          onSelectionChange={onSelectionChange}
+          onNodeClick={(_, node) => setSelection({ kind: "unit", id: node.id })}
+          onEdgeClick={(_, edge) => setSelection({ kind: "stream", id: edge.id })}
+          onPaneClick={() => setSelection(null)}
           deleteKeyCode={["Delete", "Backspace"]}
           fitView
           fitViewOptions={{ maxZoom: 1, padding: 0.3 }}
@@ -154,6 +175,12 @@ function FlowsheetEditor() {
             {t("flowsheet.empty_canvas")}
           </p>
         )}
+      </div>
+      {results && (
+        <div className="max-h-[38%] shrink-0 overflow-auto border-t border-border bg-surface">
+          <StreamTable results={results} doc={doc} compact />
+        </div>
+      )}
       </div>
       <SidePanel selection={selection} issues={issues} onDeleted={() => setSelection(null)} />
     </div>

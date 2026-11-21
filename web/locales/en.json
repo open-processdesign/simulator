@@ -3,6 +3,16 @@
     "name": "Open Process Design",
     "disclaimer": "For education and preliminary design only. Verify results before use."
   },
+  "shell": { "steps_label": "Workflow steps", "language": "Language", "step_of": "Step {{current}} of {{total}}" },
+  "languages": { "en": "English", "tr": "Türkçe" },
+  "pages": {
+    "components": { "title": "Components", "empty": "Add the chemical components of your process. Component search arrives in a later step." },
+    "thermo": { "title": "Thermodynamics", "empty": "Choose a property method (for example Peng–Robinson) for the components you added." },
+    "flowsheet": { "title": "Flowsheet", "empty": "Draw your process here: units from the palette, connected by streams." },
+    "run": { "title": "Run", "empty": "Check the inputs and run the simulation." },
+    "results": { "title": "Results", "empty": "Stream tables and unit results appear here after a run." }
+  },
+  "engine_test": {"title": "Engine test", "intro": "Loads the Python engine in your browser and solves the flash-drum example. The first visit downloads about 70 MB; later visits use the browser cache.", "run": "Solve example", "loading": "Loading: {{step}}", "ready": "Engine ready", "failed": "The engine could not be loaded: {{error}}", "step": "Step", "time": "Time", "stream": "Stream", "solve_time": "Solved in {{ms}} ms"},
   "steps": {
     "components": "Components",
     "thermo": "Thermodynamics",

@@ -1,0 +1,75 @@
+@import "tailwindcss";
+@import "../../design/tokens.css";
+
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+@import "@fontsource-variable/source-serif-4";
+
+/* Font family names as published by Fontsource (variable fonts). */
+:root {
+  --opd-font-ui: "Geist Variable", "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --opd-font-num: "Geist Mono Variable", "Geist Mono", ui-monospace, "SFMono-Regular", monospace;
+  --opd-font-display: "Source Serif 4 Variable", "Source Serif 4", Georgia, serif;
+}
+
+/* Expose design tokens to Tailwind utilities (bg-surface, text-muted, border-border, …). */
+@theme inline {
+  --color-bg: var(--opd-bg);
+  --color-surface: var(--opd-surface);
+  --color-surface-muted: var(--opd-surface-muted);
+  --color-border: var(--opd-border);
+  --color-border-strong: var(--opd-border-strong);
+  --color-text: var(--opd-text);
+  --color-muted: var(--opd-text-muted);
+  --color-subtle: var(--opd-text-subtle);
+  --color-accent: var(--opd-accent);
+  --color-accent-hover: var(--opd-accent-hover);
+  --color-accent-soft: var(--opd-accent-soft);
+  --color-on-accent: var(--opd-on-accent);
+  --color-ok: var(--opd-ok);
+  --color-warn: var(--opd-warn);
+  --color-error: var(--opd-error);
+  --color-info: var(--opd-info);
+
+  --font-sans: var(--opd-font-ui);
+  --font-mono: var(--opd-font-num);
+  --font-display: var(--opd-font-display);
+
+  --text-xs: var(--opd-text-xs);
+  --text-sm: var(--opd-text-sm);
+  --text-base: var(--opd-text-base);
+  --text-lg: var(--opd-text-lg);
+  --text-xl: var(--opd-text-xl);
+  --text-2xl: var(--opd-text-2xl);
+
+  --radius-sm: var(--opd-radius-sm);
+  --radius-md: var(--opd-radius);
+  --radius-lg: var(--opd-radius-lg);
+
+  --spacing-topbar: var(--opd-topbar-h);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--opd-bg);
+    color: var(--opd-text);
+    font-family: var(--opd-font-ui);
+    font-size: var(--opd-text-base);
+    line-height: var(--opd-leading);
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--opd-focus);
+  }
+  .num {
+    font-family: var(--opd-font-num);
+    font-variant-numeric: tabular-nums;
+  }
+}

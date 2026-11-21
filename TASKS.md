@@ -13,7 +13,7 @@ Night sessions until the demo (Mon/Wed/Sat): 21, 23, 25, 28, 30 Nov · 2, 5, 7, 
 ## M1 — Working demo (target 15 Dec 2026)
 | ID | Task | Depends | Status |
 |---|---|---|---|
-| T01 | **Web scaffold.** `web/`: Vite + React + TypeScript + Tailwind + shadcn/ui. Load `design/tokens.css`, fonts (Geist, Geist Mono, Source Serif 4, self-hosted). i18next with `web/locales/en.json` + `tr.json`, language switch. App shell: top bar + 5-step workflow nav (Components, Thermodynamics, Flowsheet, Run, Results) with empty pages. Vitest + one smoke test. GitHub Actions CI for web. | – | todo |
+| T01 | **Web scaffold.** `web/`: Vite + React + TypeScript + Tailwind + shadcn/ui. Load `design/tokens.css`, fonts (Geist, Geist Mono, Source Serif 4, self-hosted). i18next with `web/locales/en.json` + `tr.json`, language switch. App shell: top bar + 5-step workflow nav (Components, Thermodynamics, Flowsheet, Run, Results) with empty pages. Vitest + one smoke test. GitHub Actions CI for web. | – | wip |
 | T02 | **OPD models.** `engine/opd_engine/models.py`: Pydantic v2 models matching `schema/flowsheet.schema.json`; load/validate `examples/*.opd.json`; pytest; CI job for Python. `[handoff-ok]` | – | todo |
 | T03 | **Engine runtime spike.** Run `opd_engine` + `thermo` in the browser with Pyodide inside a Web Worker; solve `examples/flash-drum.opd.json` from a test page. Record load time and size. If it fails, fall back to a FastAPI service on a free container host (see D012). | T02 | todo |
 | T04 | **Reference adapter.** `engine/opd_engine/adapters/reference.py` using MIT `thermo`: Feed, Mixer, Splitter, Heater/Cooler, Valve, Flash (PT and PQ), PR/SRK/ideal. Sequential-modular solve for acyclic flowsheets. Tests vs. textbook flash example (cite source). | T02 | todo |

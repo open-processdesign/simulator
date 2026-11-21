@@ -8,7 +8,7 @@ bookkeeping: port conventions, material and energy balances, and the solve order
 
 Scope: units feed, product, mixer, splitter, heater, valve, flash, pump, compressor,
 heat exchanger, conversion reactor, shortcut column (T09); property packages
-IDEAL (Raoult), PR, SRK and NRTL (T12); recycle loops through tear streams converged with bounded
+IDEAL (Raoult), PR, SRK, NRTL (T12) and UNIQUAC (T21); recycle loops through tear streams converged with bounded
 Wegstein or successive substitution (see `recycle.py`, T08).
 
 Port and spec conventions (all values SI, see DECISIONS.md D007 and D013):
@@ -72,6 +72,7 @@ import thermo
 from pydantic import ValidationError
 from thermo import (
     NRTL,
+    UNIQUAC,
     CEOSGas,
     CEOSLiquid,
     ChemicalConstantsPackage,
@@ -96,7 +97,7 @@ UNIT_TYPES = frozenset({"feed", "product", "mixer", "splitter", "heater", "valve
                         "pump", "compressor", "heat_exchanger", "conversion_reactor",
                         "shortcut_column", "distillation_column", "cstr", "pfr",
                         "equilibrium_reactor"})
-THERMO_PACKAGES = frozenset({"IDEAL", "PR", "SRK", "NRTL"})
+THERMO_PACKAGES = frozenset({"IDEAL", "PR", "SRK", "NRTL", "UNIQUAC"})
 
 # SI unit strings accepted per spec name (v0.1 stores SI only).
 _SI = {
@@ -197,6 +198,24 @@ class _Thermo:
                 GibbsExcessModel=model,
                 equilibrium_basis="Psat",  # K_i = γ_i Psat_i / P
             )
+        elif self.package == "UNIQUAC":
+            # Modified Raoult with UNIQUAC (Abrams & Prausnitz, AIChE J. 21 (1975) 116),
+            # τ_ij = exp(b_ij / T) in thermo's sign convention (checked against methanol–water
+            # VLE); r and q from UNIFAC group contributions.
+            rs, qs = self.constants.UNIFAC_Rs, self.constants.UNIFAC_Qs
+            if any(v is None for v in list(rs) + list(qs)):
+                missing = [cid for cid, r, q in zip(self.ids, rs, qs) if r is None or q is None]
+                raise ValueError(f"no UNIQUAC r/q (UNIFAC groups) for {', '.join(missing)}")
+            tau_bs = self._activity_b(fs, n)
+            gas = IdealGas(HeatCapacityGases=self.props.HeatCapacityGases)
+            model = UNIQUAC(T=298.15, xs=[1.0 / n] * n, rs=list(rs), qs=list(qs), tau_bs=tau_bs)
+            liquid = GibbsExcessLiquid(
+                VaporPressures=self.props.VaporPressures,
+                HeatCapacityGases=self.props.HeatCapacityGases,
+                VolumeLiquids=self.props.VolumeLiquids,
+                GibbsExcessModel=model,
+                equilibrium_basis="Psat",
+            )
         else:
             kijs = self._kijs(fs, n)
             eos = PRMIX if self.package == "PR" else SRKMIX
@@ -242,6 +261,20 @@ class _Thermo:
             self.issues.append(_issue(Severity.WARNING, "missing_binary_parameter", "thermo", None,
                                       i=i, j=j))
         return b, alpha
+
+    def _activity_b(self, fs: Flowsheet, n: int) -> list[list[float]]:
+        """b_ij matrix (K) for UNIQUAC; a pair without data gets b = 0 and a warning."""
+        index = {cid: k for k, cid in enumerate(self.ids)}
+        b = [[0.0] * n for _ in range(n)]
+        missing: list[tuple[str, str]] = []
+        for row in binary_parameter_table(fs):
+            i, j = index[row["i"]], index[row["j"]]
+            b[i][j] = row["value"]
+            if row["source"] == "missing" and index[row["i"]] < index[row["j"]]:
+                missing.append((row["i"], row["j"]))
+        for i, j in missing:
+            self.issues.append(_issue(Severity.WARNING, "missing_binary_parameter", "thermo", None, i=i, j=j))
+        return b
 
     def Hf(self, zs: list[float]) -> float:
         """Σ z_i ΔHf_i (ideal gas, 298.15 K), J/mol: shifts thermo's H to a reaction basis."""
@@ -354,6 +387,32 @@ def _nrtl_rows(fs: Flowsheet) -> list[dict[str, Any]]:
     return rows
 
 
+_UNIQUAC_TABLE = "ChemSep UNIQUAC"
+
+
+def _uniquac_rows(fs: Flowsheet) -> list[dict[str, Any]]:
+    """Per pair a < b: uniquac_b (a→b) and (b→a) in K; document → ChemSep → 0 ("missing")."""
+    given = {(p.i, p.j): (p.value, p.source) for p in fs.thermo.binary_parameters
+             if p.name.lower() == "uniquac_b"}
+    rows = []
+    comps = fs.components
+    for a in range(len(comps)):
+        for c in range(a + 1, len(comps)):
+            ci, cj = comps[a], comps[c]
+            pair = [ci.cas, cj.cas]
+            db = (IPDB.get_ip_asymmetric_matrix(_UNIQUAC_TABLE, pair, "bij")
+                  if IPDB.has_ip_specific(_UNIQUAC_TABLE, pair, "bij") else None)
+            for x, y, k, m in ((ci, cj, 0, 1), (cj, ci, 1, 0)):
+                if (x.id, y.id) in given:
+                    value, source = given[(x.id, y.id)]
+                elif db is not None:
+                    value, source = float(db[k][m]), "database"
+                else:
+                    value, source = 0.0, "missing"
+                rows.append({"i": x.id, "j": y.id, "name": "uniquac_b", "value": value, "source": source})
+    return rows
+
+
 def binary_parameter_table(fs: Flowsheet) -> list[dict[str, Any]]:
     """Binary parameters the engine will use, with where each comes from.
 
@@ -363,6 +422,8 @@ def binary_parameter_table(fs: Flowsheet) -> list[dict[str, Any]]:
     """
     if fs.thermo.package == "NRTL":
         return _nrtl_rows(fs)
+    if fs.thermo.package == "UNIQUAC":
+        return _uniquac_rows(fs)
     if fs.thermo.package not in ("PR", "SRK"):
         return []
     given = {}

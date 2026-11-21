@@ -15,6 +15,7 @@ const PACKAGES: { id: ThermoPackage; available: boolean }[] = [
   { id: "PR", available: true },
   { id: "SRK", available: true },
   { id: "NRTL", available: true },
+  { id: "UNIQUAC", available: true },
 ];
 
 const SOURCE_STYLE: Record<string, string> = {
@@ -81,7 +82,16 @@ const COLUMNS: Partial<Record<ThermoPackage, Column[]>> = {
     { name: "nrtl_b", direction: "ji", label: "b_ji [K]", digits: 2 },
     { name: "nrtl_alpha", direction: "pair", label: "α_ij", digits: 4 },
   ],
+  UNIQUAC: [
+    { name: "uniquac_b", direction: "ij", label: "b_ij [K]", digits: 2 },
+    { name: "uniquac_b", direction: "ji", label: "b_ji [K]", digits: 2 },
+  ],
 };
+
+/** Locale key with the package suffix for activity-coefficient methods (e.g. `_nrtl`). */
+function keyFor(base: string, pkg: ThermoPackage): string {
+  return pkg === "NRTL" || pkg === "UNIQUAC" ? `${base}_${pkg.toLowerCase()}` : base;
+}
 
 type Pair = { a: string; b: string; cells: (BinaryParameterRow | undefined)[]; source: string };
 
@@ -132,7 +142,7 @@ function BinaryParameters() {
 
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-base font-semibold">{t(pkg === "NRTL" ? "thermo.binary_title_nrtl" : "thermo.binary_title")}</h2>
+      <h2 className="text-base font-semibold">{t(keyFor("thermo.binary_title", pkg))}</h2>
       {!columns ? (
         <p className="text-sm text-muted">{t("thermo.binary_not_needed")}</p>
       ) : n < 2 ? (
@@ -191,9 +201,9 @@ function BinaryParameters() {
             </tbody>
           </table>
           {grouped.some((p) => p.source === "missing") && (
-            <p className="text-xs text-warn">{t(pkg === "NRTL" ? "thermo.missing_note_nrtl" : "thermo.missing_note")}</p>
+            <p className="text-xs text-warn">{t(keyFor("thermo.missing_note", pkg))}</p>
           )}
-          <p className="text-xs text-subtle">{t(pkg === "NRTL" ? "thermo.database_note_nrtl" : "thermo.database_note")}</p>
+          <p className="text-xs text-subtle">{t(keyFor("thermo.database_note", pkg))}</p>
         </>
       )}
     </section>

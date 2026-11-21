@@ -80,3 +80,6 @@ New unit types `cstr` and `pfr` (backward-compatible additions to OPD 0.1). Rate
 
 **D026 · 2026-11-21 · Equilibrium reactor (T18).**
 New unit type `equilibrium_reactor` (backward-compatible OPD 0.1 addition): user-given reactions, gas-phase equilibrium Σν ln(yφP/P°) = ln K(T), with K(T) from `thermo` ideal-gas ΔHf°, ΔSf° and Cp integrals (no user K input yet). One reaction: bisection on the extent between the non-negativity bounds (always bracketed); several: Gauss–Seidel start + `least_squares`. Adiabatic: bracket outward from the inlet temperature, then Brent. Liquid-phase equilibrium and Gibbs minimisation without stoichiometry are left for later. Example: `water-gas-shift-equilibrium`. — accepted
+
+**D027 · 2026-11-21 · UNIQUAC property package (T21).**
+`UNIQUAC` added to the reference engine (modified Raoult: ideal gas, Psat, UNIQUAC liquid; Abrams & Prausnitz 1975). r and q come from UNIFAC group contributions in `thermo` (a component without UNIFAC groups gets a clear error). Binary parameters: directional `uniquac_b` (K) with τ_ij = exp(b_ij / T) in `thermo`'s sign convention, checked against methanol–water VLE (the opposite sign gives wrong results); order of precedence user value → ChemSep UNIQUAC table → 0 (ideal pair, `missing_binary_parameter` warning), same as NRTL (D020). The Thermodynamics page shows b_ij and b_ji per pair. — accepted

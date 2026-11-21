@@ -23,24 +23,26 @@ Night sessions until the demo (Mon/Wed/Sat): 21, 23, 25, 28, 30 Nov · 2, 5, 7, 
 | T08 | **Recycle loops.** Tear-stream selection + Wegstein / direct substitution in the reference adapter, with convergence report. Cite textbook source. | T04 | done |
 | T09 | **More demo units** (reference adapter, from textbooks): Pump, Compressor, Heat exchanger (two-stream, energy balance), Conversion reactor, Shortcut column (Fenske–Underwood–Gilliland). One unit per session if needed. | T04 | done |
 | T10 | **Save/load + deploy.** Save/open OPD JSON file, example gallery (flash drum, simple HDA-like loop), disclaimer banner, GitHub Pages deployment via Actions. | T07 | done |
-| T11 | **Demo check.** Build one process end-to-end in both languages, fix blockers, update README with link and screenshots. | T08, T09, T10 | review (PR #12) |
-| T12 | **NRTL property package (M1 gap).** NRTL activity coefficients in the reference engine (ChemSep NRTL table → user values → missing = ideal with warning); NRTL binary-parameter table in the UI (b_ij, b_ji, α); validation vs. experimental VLE. | T05 | review (PR #13) |
-| T13 | **Unit sets.** SI / Metric (°C, bar, kmol/h, kW) / English (°F, psia, lbmol/h, Btu/h) for every input and result in the UI; storage stays SI (D007); choice remembered per browser. | T07 | review (PR #14) |
-| T14 | **CSV export.** Stream table and unit results as a CSV file in the current unit set; Excel-friendly in both languages (UTF-8 BOM; Turkish uses `;` and decimal comma). | T13 | review (PR #15) |
-| T15 | **Rigorous distillation column (M2).** Equilibrium-stage column (MESH) by the bubble-point method with θ-correction: total condenser, partial reboiler, specs N, feed stage, R, D; any property package; checks vs. MESH residuals and FUG. | T09, T12 | review (PR #16) |
-| T16 | **Column stage profiles.** Optional `results.profiles` (axis + series) in the OPD format; the rigorous column stores T, L, V, x, y per stage; Results step shows temperature and composition charts with hover and a table view. | T15 | review (PR #17) |
-| T17 | **Kinetic reactors (M2).** CSTR and PFR with power-law kinetics (k₀, Eₐ, orders; gas or liquid concentration basis); isothermal or given duty (adiabatic); PFR length profile; checks vs. analytic first-order conversions and energy balance. | T09, T16 | review (PR #18) |
-| T18 | **Equilibrium reactor (M2).** Gas-phase chemical equilibrium with K(T) from formation data (+ fugacity coefficients); one or more reactions; isothermal or adiabatic; checks vs. WGS correlation and equilibrium conditions. | T17 | review (PR #19) |
-| T19 | **Docs (M3 start).** CONTRIBUTING, code of conduct, user guide (EN/TR), docs/VALIDATION.md listing every model check with reference and tolerance; README updated. | – | review (PR #20) |
-| T20 | **Heat-exchanger rating.** Given UA (or U and area), the exchanger finds its duty from Q = UA·LMTD (counter-current) instead of a fixed outlet; UA option in the side panel. | T09 | review (PR #21) |
+| T11 | **Demo check.** Build one process end-to-end in both languages, fix blockers, update README with link and screenshots. | T08, T09, T10 | done |
+| T12 | **NRTL property package (M1 gap).** NRTL activity coefficients in the reference engine (ChemSep NRTL table → user values → missing = ideal with warning); NRTL binary-parameter table in the UI (b_ij, b_ji, α); validation vs. experimental VLE. | T05 | done |
+| T13 | **Unit sets.** SI / Metric (°C, bar, kmol/h, kW) / English (°F, psia, lbmol/h, Btu/h) for every input and result in the UI; storage stays SI (D007); choice remembered per browser. | T07 | done |
+| T14 | **CSV export.** Stream table and unit results as a CSV file in the current unit set; Excel-friendly in both languages (UTF-8 BOM; Turkish uses `;` and decimal comma). | T13 | done |
+| T15 | **Rigorous distillation column (M2).** Equilibrium-stage column (MESH) by the bubble-point method with θ-correction: total condenser, partial reboiler, specs N, feed stage, R, D; any property package; checks vs. MESH residuals and FUG. | T09, T12 | done |
+| T16 | **Column stage profiles.** Optional `results.profiles` (axis + series) in the OPD format; the rigorous column stores T, L, V, x, y per stage; Results step shows temperature and composition charts with hover and a table view. | T15 | done |
+| T17 | **Kinetic reactors (M2).** CSTR and PFR with power-law kinetics (k₀, Eₐ, orders; gas or liquid concentration basis); isothermal or given duty (adiabatic); PFR length profile; checks vs. analytic first-order conversions and energy balance. | T09, T16 | done |
+| T18 | **Equilibrium reactor (M2).** Gas-phase chemical equilibrium with K(T) from formation data (+ fugacity coefficients); one or more reactions; isothermal or adiabatic; checks vs. WGS correlation and equilibrium conditions. | T17 | done |
+| T19 | **Docs (M3 start).** CONTRIBUTING, code of conduct, user guide (EN/TR), docs/VALIDATION.md listing every model check with reference and tolerance; README updated. | – | done |
+| T20 | **Heat-exchanger rating.** Given UA (or U and area), the exchanger finds its duty from Q = UA·LMTD (counter-current) instead of a fixed outlet; UA option in the side panel. | T09 | done |
+| T21 | **UNIQUAC property package.** UNIQUAC liquid (user values → ChemSep UNIQUAC table → missing = ideal with warning), r/q from UNIFAC groups; UI binary table (b_ij, b_ji). | T12 | review (agent/T21-uniquac) |
 
-## After the demo — DWSIM engine (needs a host, see D012)
+## After the demo — DWSIM engine (needs a host, see D012; IDs T90+ so they never clash with new tasks)
 | ID | Task | Depends | Status |
 |---|---|---|---|
-| T20 | **DWSIM headless spike.** Docker image running DWSIM automation on Linux; solve the flash example from a script. Try a free container host. Record findings in DECISIONS.md. | – | todo |
-| T21 | **DWSIM adapter + engine service.** OPD → DWSIM translation, run, map results back; separate service behind the adapter interface. Shadow-compare with `reference`. | T20 | todo |
+| T90 | **DWSIM headless spike.** Docker image running DWSIM automation on Linux; solve the flash example from a script. Try a free container host. Record findings in DECISIONS.md. | – | todo |
+| T91 | **DWSIM adapter + engine service.** OPD → DWSIM translation, run, map results back; separate service behind the adapter interface. Shadow-compare with `reference`. | T90 | todo |
 
 ## M2 / M3 — later (to be detailed after the demo)
-- Rigorous column, kinetic reactors, rigorous HX, unit sets, CSV export.
-- Validation suite + `docs/VALIDATION.md` (HDA vs. CHEMCAD, methanol, cumene).
-- Demo video, user guide, CONTRIBUTING.md, CODE_OF_CONDUCT.md.
+- Done in M2: rigorous column (T14), kinetic reactors (T17), equilibrium reactor (T18), HX rating (T20), unit sets, CSV export, docs (T19), UNIQUAC (T21).
+- Open: zoned / phase-change heat exchanger; liquid-phase equilibrium reactor.
+- Validation: HDA vs. CHEMCAD (needs Berkay's CHEMCAD stream table), methanol synthesis, cumene.
+- Demo video.

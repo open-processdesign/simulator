@@ -20,7 +20,7 @@ Repo, agent rules, design system, engine-independent data format, adapter interf
 - Deployed on GitHub Pages (free) with the "education and preliminary design" notice.
 
 ### Milestone M2 — Rigorous units + DWSIM (Jan 2027)
-DWSIM engine service on a free/cheap host (T20–T21), shadow-compared with `reference`. Rigorous distillation column, equilibrium/PFR/CSTR reactors, shell-and-tube exchanger, component database search, unit sets (SI / metric / English), result export (CSV).
+DWSIM engine service on a free/cheap host (T90–T91), shadow-compared with `reference`. Rigorous distillation column, equilibrium/PFR/CSTR reactors, shell-and-tube exchanger, component database search, unit sets (SI / metric / English), result export (CSV).
 
 ### Milestone M3 — Validated release v0.1 (target: 15 Mar 2027)
 - Validation suite: HDA (vs. maintainer's CHEMCAD case), plus 2–3 literature cases (e.g. methanol, cumene).

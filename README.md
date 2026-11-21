@@ -22,7 +22,7 @@ Open a link, build any flowsheet, run it, read the results — no installation, 
 
 Units: feed, product, mixer, splitter, flash, heater/cooler, heat exchanger, valve, pump, compressor,
 conversion reactor, CSTR, PFR, equilibrium reactor, shortcut column (Fenske–Underwood–Gilliland), rigorous distillation
-column. Property methods: Ideal, Peng–Robinson, SRK, NRTL. Recycle loops converge automatically (Wegstein).
+column. Property methods: Ideal, Peng–Robinson, SRK, NRTL, UNIQUAC. Recycle loops converge automatically (Wegstein).
 Unit sets SI / Metric / English; CSV export. Guides: [English](docs/USER_GUIDE.md) · [Türkçe](docs/USER_GUIDE.tr.md).
 How each model is checked: [docs/VALIDATION.md](docs/VALIDATION.md).
 

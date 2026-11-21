@@ -39,6 +39,22 @@ export function fakeEngine(validate: (doc: Flowsheet) => EngineIssue[] = () => [
           }
         return rows;
       }
+      if (thermo.package === "UNIQUAC") {
+        // Methanol–water ChemSep UNIQUAC values; any other pair is missing.
+        const rows: BinaryParameterRow[] = [];
+        for (let a = 0; a < components.length; a++)
+          for (let b = a + 1; b < components.length; b++) {
+            const [ci, cj] = [components[a], components[b]];
+            const known = ci.id === "methanol" && cj.id === "water";
+            const cell = (i: string, j: string, db: number): BinaryParameterRow => {
+              const u = (thermo.binary_parameters ?? []).find((p) => p.name === "uniquac_b" && p.i === i && p.j === j);
+              return u ? { i, j, name: "uniquac_b", value: u.value, source: "user" }
+                : known ? { i, j, name: "uniquac_b", value: db, source: "database" } : { i, j, name: "uniquac_b", value: 0, source: "missing" };
+            };
+            rows.push(cell(ci.id, cj.id, 169.65), cell(cj.id, ci.id, -276.42));
+          }
+        return rows;
+      }
       if (thermo.package !== "PR" && thermo.package !== "SRK") return [];
       const rows: BinaryParameterRow[] = [];
       for (let a = 0; a < components.length; a++)

@@ -85,6 +85,20 @@ pairs, so the engine treats them as ideal (warning `missing_binary_parameter`). 
 contain 39 % DME, so their phase split is off; enter literature NRTL parameters for these pairs
 on the Thermodynamics page to close it.
 
+### HDA plant template — sanity against Turton et al., ch. 1
+
+Example `hda-benzene-plant-template` (PR; two recycles, adiabatic R-101 at 75 % per pass, FUG
+column). Its specifications are illustrative, so this is a plausibility check, not a validation;
+the CHEMCAD case of the maintainer replaces it (QUESTIONS Q8). Turton values as quoted from
+Table 1.5 in course material. Tested: atom balances close (1e-5) and the per-pass conversion.
+
+| Quantity | Turton (Table 1.5) | Template |
+|---|---|---|
+| Reactor inlet toluene (Stream 6) | 144.0 kmol/h | 143.5 kmol/h |
+| Reactor outlet T (Stream 9) | 654 °C | 659.8 °C |
+| Reactor outlet benzene / toluene | 116.0 / 36.0 kmol/h | 116.9 / 35.9 kmol/h |
+| Fuel gas | 304 kmol/h | 307 kmol/h |
+
 ## Browser engine
 
 All examples are solved in Pyodide (`web/src/engine/engine.spike.test.ts`) and give the same
@@ -92,6 +106,6 @@ numbers as native CPython (flash-drum S2 x_benzene 0.6211 in both).
 
 ## Next (M3)
 
-1. **HDA vs. CHEMCAD.** Maintainer: export the CHEMCAD stream table (T, P, flows, compositions) of the HDA design-course case. We rebuild the case as `examples/hda-validated.opd.json` and add a test with ε per quantity.
+1. **HDA vs. CHEMCAD.** Maintainer: export the CHEMCAD stream table (T, P, flows, compositions) and the unit specifications of the HDA design-course case. We adapt `examples/hda-benzene-plant-template.opd.json` to it, rename it `hda-validated`, and add a test with ε per quantity (QUESTIONS Q8).
 2. Done: cumene (Unit 800) and DME (Unit 200) from Turton's published CHEMCAD tables (above).
 3. Record agreed ε values here and keep them as test tolerances.

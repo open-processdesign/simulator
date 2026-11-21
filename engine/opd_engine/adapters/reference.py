@@ -176,6 +176,7 @@ class _Thermo:
         self.cas = [c.cas for c in fs.components]
         self.package = fs.thermo.package
         self.issues: list[Issue] = []
+        self.in_loop = False  # set while a recycle loop iterates (see ReferenceAdapter._converge)
         self._fs = fs
         self._pure: dict[int, _Thermo] = {}
         self.constants, self.props = ChemicalConstantsPackage.from_IDs(self.cas)
@@ -298,6 +299,10 @@ class _Thermo:
         A stream with a single non-zero component is flashed with that component's own
         pure flasher: `thermo` 0.6.1's mixture flasher fails (P–H) or returns a wrong
         phase (P–VF with PR) for such two-phase states. Phase compositions are mapped back."""
+        if len(zs) > 1 and min(zs) < 0:  # round-off negatives from upstream arithmetic
+            zs = [max(z, 0.0) for z in zs]
+            total = sum(zs)
+            zs = [z / total for z in zs]
         if len(zs) > 1:
             nonzero = [k for k, z in enumerate(zs) if z > 0]
             if len(nonzero) == 1:
@@ -314,7 +319,73 @@ class _Thermo:
         except Exception:
             if set(spec) == {"P", "VF"} and 0 < spec["VF"] < 1 and len(zs) > 1:
                 return self._flash_PVF_bisect(zs, spec["P"], spec["VF"])
+            if set(spec) == {"P", "VF"} and spec["VF"] in (0.0, 1.0) and len(zs) > 1:
+                return self._flash_PVF_edge(zs, spec["P"], spec["VF"])
+            if set(spec) == {"P", "H"} and len(zs) > 1:
+                return self._flash_PH_bisect(zs, spec["P"], spec["H"])
             raise
+
+    def _flash_PH_bisect(self, zs: list[float], P: float, H: float) -> Any:
+        """P–H flash by bisection on T with P–T flashes (H rises with T at fixed P and z).
+        Fallback for `thermo` 0.6.1 two-phase P–H failures near phase boundaries."""
+        def h(T: float) -> float:
+            return self.flasher.flash(T=T, P=P, zs=zs).H()
+
+        lo, hi = 300.0, 300.0
+        while h(lo) > H:
+            lo *= 0.8
+            if lo < 30.0:
+                raise ValueError("P–H flash: enthalpy below the temperature range")
+        while h(hi) < H:
+            hi *= 1.25
+            if hi > 6000.0:
+                raise ValueError("P–H flash: enthalpy above the temperature range")
+        for _ in range(200):
+            mid = 0.5 * (lo + hi)
+            if h(mid) < H:
+                lo = mid
+            else:
+                hi = mid
+            if hi - lo < 1e-10 * mid:
+                break
+        return self.flasher.flash(T=0.5 * (lo + hi), P=P, zs=zs)
+
+    def _flash_PVF_edge(self, zs: list[float], P: float, VF: float) -> Any:
+        """Bubble (VF = 0) or dew (VF = 1) point by bisection on T with P–T flashes.
+
+        Fallback for `thermo` 0.6.1 failures with dissolved light gases (H2, CH4). Brackets
+        between a single-phase and a two-phase temperature found by scanning; returns the P–T
+        state just inside the two-phase region (vapour fraction within 1e-9 of the edge)."""
+        def vf(T: float) -> float:
+            return _vapor_fraction(self.flasher.flash(T=T, P=P, zs=zs))
+
+        def outside(v: float) -> bool:  # on the single-phase side of the edge
+            return v <= 0.0 if VF == 0.0 else v >= 1.0
+
+        grid = [300.0 * 1.15 ** k for k in range(-12, 13)]  # ≈ 56 K … 1.6e3 K
+        values = []
+        for T in grid:
+            try:
+                values.append((T, vf(T)))
+            except Exception:  # noqa: BLE001 — skip temperatures thermo cannot flash
+                continue
+        pair = None
+        for (t1, v1), (t2, v2) in zip(values, values[1:]):
+            if outside(v1) != outside(v2):
+                pair = (t1, t2) if outside(v1) else (t2, t1)  # (single-phase T, two-phase T)
+                break
+        if pair is None:
+            raise ValueError(f"no {'bubble' if VF == 0.0 else 'dew'} point at P = {P:.0f} Pa")
+        single, two = pair
+        for _ in range(100):
+            mid = 0.5 * (single + two)
+            if outside(vf(mid)):
+                single = mid
+            else:
+                two = mid
+            if abs(two - single) < 1e-9 * mid:
+                break
+        return self.flasher.flash(T=two, P=P, zs=zs)
 
     def _pure_thermo(self, k: int) -> "_Thermo":
         if k not in self._pure:
@@ -650,6 +721,13 @@ class ReferenceAdapter:
             states[sid] = _initial_guess(fs.stream(sid), th)
         acc = Accelerator(method=self.recycle_method)
         residual = math.inf
+        th.in_loop = True
+        try:
+            return self._iterate(block, th, states, solve_unit, issues, acc, n, residual)
+        finally:
+            th.in_loop = False
+
+    def _iterate(self, block, th, states, solve_unit, issues, acc, n, residual):
         for _ in range(self.max_iterations):
             x = {sid: states[sid] for sid in block.tears}
             for uid in block.units:
@@ -667,11 +745,17 @@ class ReferenceAdapter:
             xv = [v for sid in block.tears for v in _to_vector(x[sid], n)]
             gv = [v for sid in block.tears for v in _to_vector(g[sid], n)]
             new = acc.next(xv, gv)
+            width = n + 2
+            if any(new[k * width + i] < 0.0 for k in range(len(block.tears)) for i in range(n)):
+                new = gv  # acceleration overshot to a negative flow: take a plain step instead
             if new == gv:
                 continue  # plain substitution: computed states are reused as they are
-            width = n + 2
             for k, sid in enumerate(block.tears):
-                states[sid] = _from_vector(new[k * width:(k + 1) * width], g[sid], th)
+                try:
+                    states[sid] = _from_vector(new[k * width:(k + 1) * width], g[sid], th)
+                except Exception as exc:  # thermo could not flash the accelerated state
+                    return _error("calculation_failed", "stream", sid, target=sid,
+                                  detail=f"{type(exc).__name__}: {exc}")
         return _error("recycle_not_converged", "stream", block.tears[0], target=block.tears[0],
                       streams=block.tears, iterations=self.max_iterations,
                       residual=float(f"{residual:.3g}"))
@@ -1616,7 +1700,7 @@ def _solve_shortcut_column(u, inlets, outs, th, fs):
     ratio_hk = (1 - r_hk) / r_hk  # d/b of the heavy key
     f = [feed.F * zi for zi in z]
     d = [fi * (a ** n_min * ratio_hk) / (1 + a ** n_min * ratio_hk) for fi, a in zip(f, alpha)]
-    b = [fi - di for fi, di in zip(f, d)]
+    b = [max(fi - di, 0.0) for fi, di in zip(f, d)]  # no round-off negatives (α → ∞ for gases)
     D, B = sum(d), sum(b)
     xD, xB = [di / D for di in d], [bi / B for bi in b]
 
@@ -1804,16 +1888,25 @@ def _solve_distillation_column(u, inlets, outs, th, fs):
         raise _InputError(_error("column_empty_feed", "unit", u.id, target=u.id))
     if len(th.ids) < 2:
         raise _InputError(_error("column_needs_two_components", "unit", u.id, target=u.id))
+    D = u.specs["distillate_rate"].value
+    warnings: list[Issue] = []
+    if th.in_loop and D >= 0.99 * feed.F:  # type: ignore[operator]
+        # Inside a recycle loop the feed passes through low values while the loop converges:
+        # limit D for this pass; if it is still limited at convergence, the warning stays.
+        warnings.append(_issue(Severity.WARNING, "column_distillate_limited", "unit", u.id, target=u.id,
+                               D=round(D, 4), F=round(feed.F, 4)))  # type: ignore[arg-type]
+        D = 0.95 * feed.F  # type: ignore[operator]
     try:
         r = solve_column(th, list(feed.zs), feed.F, feed.H, P,  # type: ignore[arg-type]
                          int(u.specs["number_of_stages"].value), int(u.specs["feed_stage"].value),
-                         u.specs["reflux_ratio"].value, u.specs["distillate_rate"].value)
+                         u.specs["reflux_ratio"].value, D)
     except ColumnError as exc:
         raise _InputError(_error(exc.code, "unit", u.id, target=u.id, **exc.params)) from exc
     N = len(r.T)
     dist = _State(r.T[0], P, r.D, r.x[0], r.HL[0], 0.0)
     bott = _State(r.T[N - 1], P, r.B, r.x[N - 1], r.HL[N - 1], 0.0)
     return {"distillate": dist, "bottoms": bott}, {
+        **({_WARNINGS: warnings} if warnings else {}),
         "condenser_duty": _q(r.Qc, "W"),
         "reboiler_duty": _q(r.Qr, "W"),
         "top_temperature": _q(r.T[0], "K"),

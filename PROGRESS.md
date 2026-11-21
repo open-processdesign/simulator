@@ -163,3 +163,9 @@ Template:
 - Tests: engine 178 passed (new `test_literature_cases.py`); web 56 passed.
 - PR: agent/T25-literature-cases (stacked on T24).
 - Next: T27 HDA template.
+
+## 2026-11-21 — Claude (manual session) — T27
+- Done: HDA plant template (Turton topology, two recycles, converges in 13 Wegstein iterations / ~4 s); solver robustness (bubble/dew and P–H fallbacks, negative-flow guard for Wegstein, clipped round-off negatives, loop flash errors as issues, column D limit inside loops); VALIDATION sanity table vs Turton; Q8 for the CHEMCAD case; D032.
+- Tests: engine 184 passed (new `test_hda_template.py`); web 56 passed.
+- PR: agent/T27-hda-template (stacked on T25).
+- Next: T28 release (demo video, CHANGELOG).

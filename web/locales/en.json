@@ -72,6 +72,7 @@
     "pump_vapor_inlet": "{{target}}: the pump inlet contains vapour (vapour fraction {{vapor_fraction}}). Cool or flash the stream first.",
     "compressor_liquid_inlet": "{{target}}: the compressor inlet contains liquid (vapour fraction {{vapor_fraction}}). Heat or separate the stream first.",
     "hx_empty_side": "{{target}}: one side of the heat exchanger has no flow.",
+    "column_distillate_limited": "{{target}}: the distillate rate {{D}} mol/s is not below the feed {{F}} mol/s, so the column used 95 % of the feed. Lower the distillate rate.",
     "hx_geometry_not_converged": "{{target}}: the shell-and-tube rating did not converge. Check the geometry and the flows.",
     "hx_f_infeasible": "{{target}}: these temperatures cannot be reached with one shell pass and {{passes}} tube passes (the LMTD correction factor F is not defined). Use one tube pass (counter-current), more shells, or change the specification.",
     "missing_transport_properties": "{{target}}: viscosity or thermal conductivity is missing for a component, so the geometry cannot be rated.",

@@ -10,6 +10,9 @@ Default: agents never push to `main` anyway.
 **Q3 · Product name.** Working name "Open Process Design" (repo `simulator`). Keep it?
 Default: keep.
 
+**Q8 · HDA CHEMCAD case (M3 validation).** Please export from CHEMCAD for your HDA design case: the stream table (T, P, vapour fraction, component flows for every stream) and the unit specifications (reactor conversion/T/P, flash conditions, purge fraction, column stages/reflux/keys, thermo method). The template `examples/hda-benzene-plant-template.opd.json` will be adapted to it and tested.
+Default: until then the template stays a plausibility case (docs/VALIDATION.md).
+
 ## Answered
 
 **Q6 · GitHub Pages.** Done 2026-11-21 (Source: GitHub Actions); the demo is live at https://open-processdesign.github.io/simulator/.

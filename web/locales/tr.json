@@ -72,6 +72,7 @@
     "pump_vapor_inlet": "{{target}}: pompa girişinde buhar var (buhar kesri {{vapor_fraction}}). Akımı önce soğutun veya flaşlayın.",
     "compressor_liquid_inlet": "{{target}}: kompresör girişinde sıvı var (buhar kesri {{vapor_fraction}}). Akımı önce ısıtın veya ayırın.",
     "hx_empty_side": "{{target}}: ısı değiştiricinin bir tarafında akış yok.",
+    "column_distillate_limited": "{{target}}: distilat debisi {{D}} mol/s besleme debisinden ({{F}} mol/s) küçük değil; kolon beslemenin %95'ini kullandı. Distilat debisini düşürün.",
     "hx_geometry_not_converged": "{{target}}: gövde-boru hesabı yakınsamadı. Geometriyi ve debileri kontrol edin.",
     "hx_f_infeasible": "{{target}}: bu sıcaklıklara bir gövde geçişi ve {{passes}} boru geçişiyle ulaşılamaz (LMTD düzeltme faktörü F tanımsız). Tek boru geçişi (ters akış), daha çok gövde kullanın veya spesifikasyonu değiştirin.",
     "missing_transport_properties": "{{target}}: bir bileşenin viskozitesi veya ısıl iletkenliği yok; geometri hesaplanamıyor.",

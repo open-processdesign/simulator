@@ -87,7 +87,7 @@ def test_registered_and_capabilities():
     assert "reference" in adapter.available()
     caps = ENGINE.capabilities()
     assert {"feed", "product", "mixer", "splitter", "heater", "valve", "flash"} <= caps.unit_types
-    assert caps.thermo_packages == {"IDEAL", "PR", "SRK"}
+    assert caps.thermo_packages == {"IDEAL", "PR", "SRK", "NRTL"}
     assert caps.supports_recycle
     assert "thermo" in ENGINE.version()
 
@@ -324,7 +324,7 @@ def test_unsupported_package_and_wrong_ports():
     doc["units"][1]["type"] = "pump"  # a pump has ports in/out, not vapor/liquid
     assert set(codes(doc)) == {"unconnected_port", "unknown_port"}
     doc = copy.deepcopy(FLASH_DRUM)
-    doc["thermo"]["package"] = "NRTL"
+    doc["thermo"]["package"] = "UNIQUAC"
     assert codes(doc) == ["unsupported_thermo"]
 
 

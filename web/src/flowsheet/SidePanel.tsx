@@ -74,6 +74,8 @@ function UnitPanel({ unit, issues, onDeleted }: { unit: Unit; issues: EngineIssu
       {unit.type === "feed" && <FeedEditor unit={unit} />}
       {unit.type === "conversion_reactor" && <ReactionsEditor unit={unit} />}
       {unit.type === "shortcut_column" && <KeysEditor unit={unit} />}
+      {(unit.type === "cstr" || unit.type === "pfr") && <KineticsEditor unit={unit} />}
+      {unit.type === "equilibrium_reactor" && <EquilibriumEditor unit={unit} />}
 
       {own && (
         <section className="flex flex-col gap-1">
@@ -143,7 +145,7 @@ function SpecGroupEditor({ unit, group }: { unit: Unit; group: SpecGroup }) {
       {active && (
         <QuantityField
           label={t(`flowsheet.specs.${active}`)}
-          unit={specUnit(active)}
+          name={active}
           value={unit.specs?.[active]?.value}
           onCommit={(v) =>
             dispatch({
@@ -170,7 +172,7 @@ function SplitterEditor({ unit }: { unit: Unit }) {
         <QuantityField
           key={port}
           label={t("flowsheet.split_to", { port: t(`flowsheet.ports.${port}`) })}
-          unit="1"
+          name="fraction"
           value={unit.specs?.[`split_${port}`]?.value}
           onCommit={(v) => dispatch({ type: "set_spec", id: unit.id, name: `split_${port}`, quantity: v === null ? null : { value: v, unit: "1" } })}
         />
@@ -211,10 +213,10 @@ function FeedStreamEditor({ stream, doc }: { stream: Stream; doc: Flowsheet }) {
           </label>
         ))}
       </div>
-      <QuantityField label={t(`flowsheet.specs.${thermal}`)} unit={specUnit(thermal)} value={st[thermal]?.value}
+      <QuantityField label={t(`flowsheet.specs.${thermal}`)} name={thermal} value={st[thermal]?.value}
         onCommit={(v) => setField(thermal, v, [thermal === "temperature" ? "vapor_fraction" : "temperature"])} />
-      <QuantityField label={t("flowsheet.specs.pressure")} unit="Pa" value={st.pressure?.value} onCommit={(v) => setField("pressure", v)} />
-      <QuantityField label={t("flowsheet.specs.molar_flow")} unit="mol/s" value={st.molar_flow?.value} onCommit={(v) => setField("molar_flow", v)} />
+      <QuantityField label={t("flowsheet.specs.pressure")} name="pressure" value={st.pressure?.value} onCommit={(v) => setField("pressure", v)} />
+      <QuantityField label={t("flowsheet.specs.molar_flow")} name="molar_flow" value={st.molar_flow?.value} onCommit={(v) => setField("molar_flow", v)} />
 
       <h4 className="mt-2 text-sm font-semibold">{t("flowsheet.composition")}</h4>
       {doc.components.length === 0 ? (
@@ -222,7 +224,7 @@ function FeedStreamEditor({ stream, doc }: { stream: Stream; doc: Flowsheet }) {
       ) : (
         <>
           {doc.components.map((c) => (
-            <QuantityField key={c.id} label={c.name} unit="1" value={fractions[c.id]}
+            <QuantityField key={c.id} label={c.name} name="fraction" value={fractions[c.id]}
               onCommit={(v) => {
                 const next = { ...fractions };
                 if (v === null) delete next[c.id];
@@ -294,7 +296,7 @@ function ReactionsEditor({ unit }: { unit: Unit }) {
           </div>
           <p className="text-xs text-muted">{t("flowsheet.stoich_hint")}</p>
           {doc.components.map((c) => (
-            <QuantityField key={c.id} label={`ν ${c.name}`} unit="1" value={r.stoichiometry[c.id]}
+            <QuantityField key={c.id} label={`ν ${c.name}`} name="number" value={r.stoichiometry[c.id]}
               onCommit={(v) => {
                 const stoich = { ...r.stoichiometry };
                 if (v === null || v === 0) delete stoich[c.id];
@@ -310,7 +312,7 @@ function ReactionsEditor({ unit }: { unit: Unit }) {
               {doc.components.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </label>
-          <QuantityField label={t("flowsheet.conversion")} unit="1" value={r.conversion}
+          <QuantityField label={t("flowsheet.conversion")} name="fraction" value={r.conversion}
             onCommit={(v) => update(k, { conversion: v ?? 0 })} />
         </div>
       ))}
@@ -340,6 +342,100 @@ function KeysEditor({ unit }: { unit: Unit }) {
         </label>
       ))}
       <p className="text-xs text-muted">{t("flowsheet.column_note")}</p>
+    </fieldset>
+  );
+}
+
+type RateLaw = { stoichiometry: Record<string, number>; k0: number; Ea: number; orders: Record<string, number> };
+
+function KineticsEditor({ unit }: { unit: Unit }) {
+  const { t } = useTranslation();
+  const { doc, dispatch } = useFlowsheet();
+  const reactions = (unit.options?.reactions as RateLaw[] | undefined) ?? [];
+  const phase = (unit.options?.phase as string | undefined) ?? "gas";
+  const save = (next: RateLaw[]) => dispatch({ type: "set_options", id: unit.id, options: { reactions: next } });
+  const update = (k: number, patch: Partial<RateLaw>) => save(reactions.map((r, i) => (i === k ? { ...r, ...patch } : r)));
+  const setMap = (k: number, key: "stoichiometry" | "orders", cid: string, v: number | null) => {
+    const map = { ...reactions[k][key] };
+    if (v === null || v === 0) delete map[cid];
+    else map[cid] = v;
+    update(k, { [key]: map } as Partial<RateLaw>);
+  };
+
+  if (doc.components.length === 0) return <p className="text-sm text-muted">{t("flowsheet.no_components")}</p>;
+  return (
+    <fieldset className="flex flex-col gap-3 rounded-md border border-border bg-surface p-3">
+      <legend className="px-1 text-sm font-semibold">{t("flowsheet.kinetics")}</legend>
+      <label className="flex items-center justify-between gap-2 text-sm text-muted">
+        {t("flowsheet.phase")}
+        <select value={phase} onChange={(e) => dispatch({ type: "set_options", id: unit.id, options: { phase: e.target.value } })}
+          className="h-7 w-[11.5rem] rounded-sm border border-border-strong bg-surface px-2 text-sm text-text">
+          <option value="gas">{t("flowsheet.phase_gas")}</option>
+          <option value="liquid">{t("flowsheet.phase_liquid")}</option>
+        </select>
+      </label>
+      <p className="text-xs text-muted">{t("flowsheet.rate_hint")}</p>
+      {reactions.map((r, k) => (
+        <div key={k} className="flex flex-col gap-1.5 border-t border-border pt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">{t("flowsheet.reaction_n", { n: k + 1 })}</span>
+            <Button variant="ghost" size="sm" aria-label={t("flowsheet.remove_reaction", { n: k + 1 })}
+              onClick={() => save(reactions.filter((_, i) => i !== k))}>
+              <Trash2 aria-hidden />
+            </Button>
+          </div>
+          {doc.components.map((c) => (
+            <QuantityField key={`nu-${c.id}`} label={`ν ${c.name}`} name="number" value={r.stoichiometry[c.id]}
+              onCommit={(v) => setMap(k, "stoichiometry", c.id, v)} />
+          ))}
+          <QuantityField label={t("flowsheet.k0")} name="rate_constant" value={r.k0} onCommit={(v) => update(k, { k0: v ?? 0 })} />
+          <QuantityField label={t("flowsheet.Ea")} name="activation_energy" value={r.Ea} onCommit={(v) => update(k, { Ea: v ?? 0 })} />
+          {doc.components.map((c) => (
+            <QuantityField key={`n-${c.id}`} label={t("flowsheet.order_of", { name: c.name })} name="order" value={r.orders[c.id]}
+              onCommit={(v) => setMap(k, "orders", c.id, v)} />
+          ))}
+        </div>
+      ))}
+      <Button variant="secondary" size="sm" onClick={() => save([...reactions, { stoichiometry: {}, k0: 1, Ea: 0, orders: {} }])}>
+        {t("flowsheet.add_reaction")}
+      </Button>
+    </fieldset>
+  );
+}
+
+function EquilibriumEditor({ unit }: { unit: Unit }) {
+  const { t } = useTranslation();
+  const { doc, dispatch } = useFlowsheet();
+  const reactions = (unit.options?.reactions as { stoichiometry: Record<string, number> }[] | undefined) ?? [];
+  const save = (next: { stoichiometry: Record<string, number> }[]) => dispatch({ type: "set_options", id: unit.id, options: { reactions: next } });
+  if (doc.components.length === 0) return <p className="text-sm text-muted">{t("flowsheet.no_components")}</p>;
+  return (
+    <fieldset className="flex flex-col gap-3 rounded-md border border-border bg-surface p-3">
+      <legend className="px-1 text-sm font-semibold">{t("flowsheet.specs.reactions")}</legend>
+      <p className="text-xs text-muted">{t("flowsheet.equilibrium_hint")}</p>
+      {reactions.map((r, k) => (
+        <div key={k} className="flex flex-col gap-1.5 border-t border-border pt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">{t("flowsheet.reaction_n", { n: k + 1 })}</span>
+            <Button variant="ghost" size="sm" aria-label={t("flowsheet.remove_reaction", { n: k + 1 })}
+              onClick={() => save(reactions.filter((_, i) => i !== k))}>
+              <Trash2 aria-hidden />
+            </Button>
+          </div>
+          {doc.components.map((c) => (
+            <QuantityField key={c.id} label={`ν ${c.name}`} name="number" value={r.stoichiometry[c.id]}
+              onCommit={(v) => {
+                const st = { ...r.stoichiometry };
+                if (v === null || v === 0) delete st[c.id];
+                else st[c.id] = v;
+                save(reactions.map((x, i) => (i === k ? { stoichiometry: st } : x)));
+              }} />
+          ))}
+        </div>
+      ))}
+      <Button variant="secondary" size="sm" onClick={() => save([...reactions, { stoichiometry: {} }])}>
+        {t("flowsheet.add_reaction")}
+      </Button>
     </fieldset>
   );
 }

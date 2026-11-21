@@ -1,5 +1,10 @@
 # Architecture
 
+> **Demo phase (since 2026-11-20, DECISIONS.md D011/D014):** there is no API service yet. The web app runs
+> `engine/opd_engine` (OPD models, adapter interface, reference engine) inside a Web Worker on Pyodide and calls
+> `opd_engine.runtime` directly. The layers below remain the target once DWSIM joins as a separate service (D012);
+> the runtime's JSON shape is the same one the API will return.
+
 ## Layers
 ```
 ┌───────────────┐  OPD JSON   ┌──────────────┐  OPD JSON   ┌───────────────────┐

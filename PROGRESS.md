@@ -81,3 +81,55 @@ Template:
 - Tests: web 41 passed (parsing, file names incl. Turkish letters, draft, gallery, open/save via the menu, bad file message). End-to-end in Chrome: HDA example opened from the menu, run in < 1 s (recycle converged in 10 iterations), Turkish UI with decimal commas, draft kept after reload.
 - PR: #11 (based on PR #10). Maintainer action: Q6 (turn on Pages).
 - Next: T11 (demo check, README with link and screenshots) after the PRs are merged and Pages is on.
+
+## 2026-11-21 — Claude (maintainer-requested session) — merge + T11
+- Merged PRs #2–#11 into `main` (maintainer's request), in order with merge commits; T01–T10 marked done. Turned on GitHub Pages (Source: GitHub Actions) through the maintainer's browser session; the `pages` workflow published the demo at https://open-processdesign.github.io/simulator/. Nightly scheduled task switched off (maintainer's request).
+- T11 demo check: on the live site (real jsDelivr + PyPI downloads) the engine loaded and all three examples solved (flash drum 10 ms, column 40 ms, HDA loop < 1 s). End-to-end in Turkish in headless Chrome: flash drum drawn with the mouse, values typed with decimal commas, solved; same numbers as English. No blockers found.
+- README: live link, how to try it, units list, screenshots, updated architecture, developer commands. ARCHITECTURE.md: note on the browser engine.
+- PR: #12.
+- Next (M2): rigorous units, unit sets, validation suite; see ROADMAP.md.
+
+## 2026-11-21 — Claude (maintainer-requested session) — T12
+- Done: NRTL property method in the reference engine (ChemSep NRTL parameters, user overrides, ideal fallback with warning), robust P–VF flash fallback, NRTL binary table in the UI (b_ij, b_ji, α), example `methanol-water-column-nrtl.opd.json`. EN/TR strings.
+- Tests: engine 86 passed (methanol–water vs. experiment at 4 points; NRTL beats Raoult; ethanol–water azeotrope; parameter sources; τ = 0 equals Raoult). Web 42 passed. All examples solve in Pyodide.
+- PR: #13 (based on PR #12).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T13
+- Done: unit-set selector in the top bar (SI / Metric / English); all inputs, the stream table, unit results and component boiling points convert; storage stays SI. Top bar compacted (visually hidden labels) so it fits at 1366 px.
+- Tests: web 48 passed (round trips and textbook factors, kind mapping, metric input stored as SI, psi display, metric stream table). E2E in Chrome: NRTL methanol–water example in metric units.
+- PR: #14 (based on PR #13).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T14
+- Done: "Export CSV" on the Results step: stream table + unit results in the current unit set, UTF-8 BOM, `,`/`.` in English and `;`/`,` in Turkish (Excel defaults), file `<process>-results.csv`; hidden when results are stale.
+- Tests: web 50 passed (metric values, Turkish separators, quoting).
+- PR: #15 (based on PR #14).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T15
+- Done: `engine/opd_engine/adapters/column.py` (bubble-point method + θ-method), `distillation_column` unit in engine, schema, models and UI (palette, spec groups, unit-set kinds, EN/TR), example `benzene-toluene-rigorous-column.opd.json`.
+- Tests: engine 94 passed — MESH residuals on every stage (component balances, y = Kx with K recomputed, summations, enthalpy balances) and overall balances; rigorous column reproduces the FUG design within a few percent (recovery, x_D, condenser duty); more reflux → purer distillate; NRTL methanol–water column; input errors. Web 50 passed; all examples solve in Pyodide (rigorous column 0.6 s).
+- PR: #16 (based on PR #15).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T16
+- Done: `results.profiles` in schema and models; rigorous column stores stage profiles; Results step shows temperature and liquid-composition charts (hover tooltip, legend, direct labels, unit sets) with a table view. Series colours validated with the dataviz palette validator (all hard checks pass; contrast WARN handled by labels + table).
+- Tests: engine 95 passed (profiles stored, schema-valid); web 51 passed (charts, table in metric units). Rendered and checked in Chrome.
+- PR: #17 (based on PR #16).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T17
+- Done: `engine/opd_engine/adapters/kinetics.py` (power-law rates, CSTR and PFR solvers), `cstr`/`pfr` units in engine, schema, models and UI (palette, rate-law editor with phase, k₀, Eₐ, orders; volume/time/energy unit kinds), PFR length profiles reuse the profile charts (now generic axis), example `ethane-cracking-pfr.opd.json`. Fixes: chart x-scale for small ranges, non-overlapping end labels, exponent display for very large/small inputs.
+- Tests: engine 105 passed — first-order CSTR and PFR vs. closed form at three volumes, second-order CSTR vs. its quadratic, Arrhenius dependence, adiabatic PFR outlet T equals the adiabatic conversion reactor at the same conversion, monotonic exothermic profile, input errors. Web 51 passed. Rendered in Chrome in metric units.
+- PR: #18 (based on PR #17).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T18
+- Done: `engine/opd_engine/adapters/equilibrium.py`, `equilibrium_reactor` unit in engine, schema, models and UI (reaction editor, EN/TR), example `water-gas-shift-equilibrium.opd.json`.
+- Tests: engine 116 passed — WGS K(T) vs. Moe correlation (600–800 K, within 6 %), K = 1 between 1050 and 1150 K, outlet satisfies K and element balances, WGS pressure-independent, ammonia yield rises with pressure, adiabatic outlet in equilibrium at its own T with zero duty, two simultaneous reactions (SMR + WGS) both at equilibrium. Web 51 passed; all examples solve in Pyodide.
+- PR: #19 (based on PR #18).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T19
+- Done: CONTRIBUTING.md, CODE_OF_CONDUCT.md (own text), docs/USER_GUIDE.md + USER_GUIDE.tr.md, docs/VALIDATION.md (all model checks with reference, quantity, tolerance, test; M3 next steps), README links and unit list.
+- PR: #20 (based on PR #19).
+- Maintainer action for M3: export the CHEMCAD HDA stream table (see VALIDATION.md "Next").
+
+## 2026-11-21 — Claude (maintainer-requested session) — T20
+- Done: heat-exchanger rating mode (`ua`, or `u_overall` + `area`): duty solved from Q = UA·LMTD with Brent, bounded by the no-cross maximum duty; UA option in the side panel.
+- Tests: engine 117 passed (rating with the design's UA reproduces the design outlet and duty; doubling the area raises the duty). Web 51 passed.
+- PR: #21 (based on PR #20).

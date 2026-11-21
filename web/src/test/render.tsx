@@ -21,6 +21,24 @@ export function fakeEngine(validate: (doc: Flowsheet) => EngineIssue[] = () => [
     simulate: () => Promise.reject(new Error("not used")),
     binaryParameters: async (doc) => {
       const { components, thermo } = doc as Flowsheet;
+      if (thermo.package === "NRTL") {
+        // Methanol–water ChemSep-like values; any other pair is missing.
+        const rows: BinaryParameterRow[] = [];
+        for (let a = 0; a < components.length; a++)
+          for (let b = a + 1; b < components.length; b++) {
+            const [ci, cj] = [components[a], components[b]];
+            const known = ci.id === "methanol" && cj.id === "water";
+            const user = (name: string, i: string, j: string) => (thermo.binary_parameters ?? [])
+              .find((p) => p.name === name && p.i === i && p.j === j);
+            const cell = (name: "nrtl_b" | "nrtl_alpha", i: string, j: string, db: number, miss: number): BinaryParameterRow => {
+              const u = user(name, i, j);
+              return u ? { i, j, name, value: u.value, source: "user" }
+                : known ? { i, j, name, value: db, source: "database" } : { i, j, name, value: miss, source: "missing" };
+            };
+            rows.push(cell("nrtl_b", ci.id, cj.id, -95.13, 0), cell("nrtl_b", cj.id, ci.id, 398.95, 0), cell("nrtl_alpha", ci.id, cj.id, 0.2999, 0.3));
+          }
+        return rows;
+      }
       if (thermo.package !== "PR" && thermo.package !== "SRK") return [];
       const rows: BinaryParameterRow[] = [];
       for (let a = 0; a < components.length; a++)

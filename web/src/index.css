@@ -12,6 +12,29 @@
   --opd-font-display: "Source Serif 4 Variable", "Source Serif 4", Georgia, serif;
 }
 
+/* Categorical chart series (validated: dataviz validate_palette.js, light #FFF / dark #24221F).
+   Fixed order, never cycled; text never uses these colours. */
+:root {
+  --opd-series-1: #2a78d6;
+  --opd-series-2: #eb6834;
+  --opd-series-3: #1baf7a;
+  --opd-series-4: #eda100;
+  --opd-series-5: #e87ba4;
+  --opd-series-6: #008300;
+  --opd-series-7: #6250d6;
+  --opd-series-8: #e34948;
+}
+[data-theme="dark"] {
+  --opd-series-1: #3987e5;
+  --opd-series-2: #d95926;
+  --opd-series-3: #199e70;
+  --opd-series-4: #c98500;
+  --opd-series-5: #d55181;
+  --opd-series-6: #0ca30c;
+  --opd-series-7: #9085e9;
+  --opd-series-8: #e66767;
+}
+
 /* Expose design tokens to Tailwind utilities (bg-surface, text-muted, border-border, …). */
 @theme inline {
   --color-bg: var(--opd-bg);

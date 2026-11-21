@@ -38,7 +38,7 @@ export const UNITS: UnitDef[] = [
   { type: "valve", category: "pressure", prefix: "V", inlets: ["in"], outlets: ["out"], groups: [PRESSURE_REQUIRED], available: true },
   { type: "heat_exchanger", category: "heat", prefix: "E", inlets: ["hot_in", "cold_in"], outlets: ["hot_out", "cold_out"],
     groups: [
-      { key: "hx_spec", options: ["hot_outlet_temperature", "cold_outlet_temperature", "duty"] },
+      { key: "hx_spec", options: ["hot_outlet_temperature", "cold_outlet_temperature", "duty", "ua"] },
       { key: "hot_dp", options: ["hot_pressure_drop"], optional: true },
       { key: "cold_dp", options: ["cold_pressure_drop"], optional: true },
     ], available: true },
@@ -51,6 +51,20 @@ export const UNITS: UnitDef[] = [
       { key: "lk_recovery", options: ["lk_recovery"] },
       { key: "hk_recovery", options: ["hk_recovery"] },
       { key: "reflux", options: ["reflux_ratio_factor"] },
+      { key: "column_pressure", options: ["pressure"], optional: true },
+    ], available: true },
+  { type: "cstr", category: "reaction", prefix: "R", inlets: ["in"], outlets: ["out"],
+    groups: [{ key: "volume", options: ["volume"] }, { key: "reactor_thermal", options: ["temperature", "duty"] }, PRESSURE_OPTIONAL], available: true },
+  { type: "pfr", category: "reaction", prefix: "R", inlets: ["in"], outlets: ["out"],
+    groups: [{ key: "volume", options: ["volume"] }, { key: "reactor_thermal", options: ["temperature", "duty"] }, PRESSURE_OPTIONAL], available: true },
+  { type: "equilibrium_reactor", category: "reaction", prefix: "R", inlets: ["in"], outlets: ["out"],
+    groups: [{ key: "reactor_thermal", options: ["temperature", "duty"] }, PRESSURE_OPTIONAL], available: true },
+  { type: "distillation_column", category: "separation", prefix: "T", inlets: ["in"], outlets: ["distillate", "bottoms"],
+    groups: [
+      { key: "number_of_stages", options: ["number_of_stages"] },
+      { key: "feed_stage", options: ["feed_stage"] },
+      { key: "reflux_ratio", options: ["reflux_ratio"] },
+      { key: "distillate_rate", options: ["distillate_rate"] },
       { key: "column_pressure", options: ["pressure"], optional: true },
     ], available: true },
 ];
@@ -78,6 +92,12 @@ export const SPEC_UNITS: Record<string, string> = {
   lk_recovery: "1",
   hk_recovery: "1",
   reflux_ratio_factor: "1",
+  number_of_stages: "1",
+  feed_stage: "1",
+  reflux_ratio: "1",
+  distillate_rate: "mol/s",
+  volume: "m3",
+  ua: "W/K",
 };
 
 export function specUnit(name: string): string {

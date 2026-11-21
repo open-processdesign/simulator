@@ -7,9 +7,11 @@ import { EngineProvider } from "./engine/EngineProvider";
 import { FlowsheetProvider } from "./state/FlowsheetProvider";
 import { RunProvider } from "./state/RunProvider";
 import { SelectionProvider } from "./state/SelectionProvider";
+import { UnitSetProvider } from "./units/UnitSetProvider";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
+    <UnitSetProvider>
     <EngineProvider>
       <FlowsheetProvider persist>
         <RunProvider>
@@ -19,5 +21,6 @@ createRoot(document.getElementById("root")!).render(
         </RunProvider>
       </FlowsheetProvider>
     </EngineProvider>
+    </UnitSetProvider>
   </StrictMode>,
 );

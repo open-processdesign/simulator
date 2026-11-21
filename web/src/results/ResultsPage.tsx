@@ -5,9 +5,12 @@ import { formatNumber } from "@/lib/format";
 import { IssueList } from "./IssueList";
 import { RunButton } from "./RunButton";
 import { StreamTable } from "./StreamTable";
-
-/** Digits by unit: whole watts and pascals, 2 for kelvin, 4 otherwise. */
-const DIGITS: Record<string, number> = { W: 0, Pa: 0, K: 2, "W/K": 1, "mol/s": 4 };
+import { useUnits } from "@/units/UnitSetProvider";
+import { Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { fileName } from "@/state/persistence";
+import { downloadText, resultsCsv } from "./csv";
+import { ProfileCharts } from "./ProfileChart";
 
 /** Step 5: stream table, unit results and messages of the last run. */
 export function ResultsPage() {
@@ -15,12 +18,35 @@ export function ResultsPage() {
   const { doc } = useFlowsheet();
   const { run, stale } = useRun();
   const lang = i18n.resolvedLanguage;
+  const units = useUnits();
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-5 px-6 py-8">
       <div className="flex items-center justify-between gap-4">
         <h1 className="font-display text-2xl font-medium">{t("pages.results.title")}</h1>
-        <RunButton size="sm" />
+        <div className="flex items-center gap-2">
+          {run.state === "done" && run.results && !stale && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const tr = lang === "tr";
+                const csv = resultsCsv(doc, run.results!, {
+                  separator: tr ? ";" : ",",
+                  decimal: tr ? "," : ".",
+                  label: (k) => t(k),
+                  unit: units.unit,
+                  toDisplay: units.toDisplay,
+                });
+                downloadText(csv, fileName(doc).replace(/\.opd\.json$/, "-results.csv"));
+              }}
+            >
+              <Download aria-hidden />
+              {t("csv.export")}
+            </Button>
+          )}
+          <RunButton size="sm" />
+        </div>
       </div>
 
       {run.state === "idle" && <p className="text-muted">{t("pages.results.empty")}</p>}
@@ -64,10 +90,11 @@ export function ResultsPage() {
                             <dt className="text-muted">
                               {name.startsWith("split_") ? t("flowsheet.split_to", { port: t(`flowsheet.ports.${name.slice(6)}`) })
                                 : name.startsWith("extent_") ? t("flowsheet.extent_n", { n: name.slice(7) })
+                                : name.startsWith("equilibrium_constant_") ? `${t("flowsheet.specs.equilibrium_constant")} ${name.slice(21)}`
                                 : t(`flowsheet.specs.${name}`, { defaultValue: name })}
                             </dt>
-                            <dd className="num text-right">{formatNumber(q.value, lang, DIGITS[q.unit] ?? (name.endsWith("stages") || name === "feed_stage" ? 1 : 4))}</dd>
-                            <dd className="num text-xs leading-5 text-muted">{q.unit === "1" ? "–" : q.unit}</dd>
+                            <dd className="num text-right">{formatNumber(units.toDisplay(name, q.value), lang, units.digits(name))}</dd>
+                            <dd className="num text-xs leading-5 text-muted">{units.unit(name)}</dd>
                           </div>
                         ))}
                       </dl>
@@ -75,6 +102,15 @@ export function ResultsPage() {
                   ))}
                 </div>
               </section>
+
+              {run.results.profiles && Object.keys(run.results.profiles).length > 0 && (
+                <section className="flex flex-col gap-3">
+                  <h2 className="text-base font-semibold">{t("profiles.heading")}</h2>
+                  {Object.entries(run.results.profiles).map(([id, profile]) => (
+                    <ProfileCharts key={id} unitId={id} profile={profile} doc={doc} />
+                  ))}
+                </section>
+              )}
             </>
           )}
         </>

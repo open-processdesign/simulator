@@ -35,7 +35,7 @@ export interface BootOptions {
 export interface BinaryParameterRow {
   i: string;
   j: string;
-  name: "kij";
+  name: "kij" | "nrtl_b" | "nrtl_alpha";
   value: number;
   source: "database" | "missing" | "user" | "literature" | "regression" | "default";
 }

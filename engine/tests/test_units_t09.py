@@ -212,3 +212,21 @@ def test_all_examples_solve():
     for path in sorted((Path(__file__).resolve().parents[2] / "examples").glob("*.opd.json")):
         result = ENGINE.simulate(json.loads(path.read_text(encoding="utf-8")))
         assert result.converged, (path.name, [i for i in result.issues if i.severity is adapter.Severity.ERROR])
+
+
+def test_heat_exchanger_rating_with_ua_reproduces_design():
+    feeds = {"hot_in": st(400.0, 2e5, 10.0, {"benzene": 0.0, "toluene": 1.0}),
+             "cold_in": st(300.0, 2e5, 20.0, {"benzene": 1.0, "toluene": 0.0})}
+    design = solve(one_unit({"id": "E-1", "type": "heat_exchanger", "specs": {"hot_outlet_temperature": q(330.0, "K")}},
+                            BT, feeds, ["hot_out", "cold_out"]))[0]["units"]["E-1"]
+    UA = design["ua"]["value"]
+    rated = solve(one_unit({"id": "E-1", "type": "heat_exchanger", "specs": {"ua": q(UA, "W/K")}},
+                           BT, feeds, ["hot_out", "cold_out"]))[0]["units"]["E-1"]
+    assert rated["hot_outlet_temperature"]["value"] == pytest.approx(330.0, abs=1e-3)
+    assert rated["duty"]["value"] == pytest.approx(design["duty"]["value"], rel=1e-6)
+    # Same with U and area; a bigger exchanger transfers more heat.
+    rated2 = solve(one_unit({"id": "E-1", "type": "heat_exchanger",
+                             "specs": {"u_overall": q(500.0, "W/m2/K"), "area": q(UA / 500.0 * 2, "m2")}},
+                            BT, feeds, ["hot_out", "cold_out"]))[0]["units"]["E-1"]
+    assert rated2["duty"]["value"] > rated["duty"]["value"]
+    assert rated2["ua"]["value"] == pytest.approx(2 * UA, rel=1e-6)

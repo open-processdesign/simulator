@@ -8,7 +8,7 @@ bookkeeping: port conventions, material and energy balances, and the solve order
 
 Scope: units feed, product, mixer, splitter, heater, valve, flash, pump, compressor,
 heat exchanger, conversion reactor, shortcut column (T09); property packages
-IDEAL (Raoult), PR and SRK; recycle loops through tear streams converged with bounded
+IDEAL (Raoult), PR, SRK and NRTL (T12); recycle loops through tear streams converged with bounded
 Wegstein or successive substitution (see `recycle.py`, T08).
 
 Port and spec conventions (all values SI, see DECISIONS.md D007 and D013):
@@ -33,7 +33,8 @@ pump       in, out                pressure *or* pressure_increase; optional effi
 compressor in, out                pressure *or* pressure_increase; optional isentropic
                                   efficiency (default 0.75)
 heat_      hot_in, hot_out,       exactly one of hot_outlet_temperature,
-exchanger  cold_in, cold_out      cold_outlet_temperature, duty; optional
+exchanger  cold_in, cold_out      cold_outlet_temperature, duty, ua (W/K) or
+                                  u_overall (W/m²K) + area (m²) for rating; optional
                                   hot_pressure_drop, cold_pressure_drop; counter-current
 conversion in, out                options.reactions = [{stoichiometry: {component: ν},
 _reactor                          key: component, conversion: 0…1}, …] applied in order;
@@ -43,6 +44,17 @@ shortcut_  in, distillate,        options.light_key, options.heavy_key; specs
 column     bottoms                lk_recovery (to distillate), hk_recovery (to bottoms),
                                   reflux_ratio_factor (R/Rmin); optional pressure;
                                   total condenser
+distill-   in, distillate,        number_of_stages (incl. condenser and reboiler),
+ation_     bottoms                feed_stage (counted from the top), reflux_ratio,
+column                            distillate_rate; optional pressure; total condenser,
+                                  partial reboiler; rigorous MESH (column.py, T15)
+cstr, pfr  in, out                volume (m³); exactly one of temperature, duty;
+                                  optional pressure *or* pressure_drop; options.phase
+                                  ("gas" | "liquid"), options.reactions = [{stoichiometry,
+                                  k0, Ea (J/mol), orders: {component: n}}] (kinetics.py)
+equilib-   in, out                exactly one of temperature, duty; optional pressure *or*
+rium_                             pressure_drop; options.reactions = [{stoichiometry}];
+reactor                           gas-phase chemical equilibrium (equilibrium.py, T18)
 =========  =====================  ==========================================================
 
 Duty is heat added to the process stream (W): positive for heating, negative for cooling.
@@ -59,6 +71,7 @@ from typing import Any, Callable
 import thermo
 from pydantic import ValidationError
 from thermo import (
+    NRTL,
     CEOSGas,
     CEOSLiquid,
     ChemicalConstantsPackage,
@@ -74,12 +87,16 @@ from thermo.interaction_parameters import IPDB
 from .. import adapter as _adapter
 from ..adapter import Capabilities, Issue, OPDDocument, Severity, SimulationResult, Target
 from ..models import Flowsheet, Stream, Unit, check_references, load
+from .column import ColumnError, solve_column
+from .equilibrium import EquilibriumError, ln_k, solve_adiabatic, solve_equilibrium
+from .kinetics import KineticsError, parse_rate_laws, solve_cstr, solve_pfr
 from .recycle import Accelerator, Block, Edge, solve_plan
 
 UNIT_TYPES = frozenset({"feed", "product", "mixer", "splitter", "heater", "valve", "flash",
                         "pump", "compressor", "heat_exchanger", "conversion_reactor",
-                        "shortcut_column"})
-THERMO_PACKAGES = frozenset({"IDEAL", "PR", "SRK"})
+                        "shortcut_column", "distillation_column", "cstr", "pfr",
+                        "equilibrium_reactor"})
+THERMO_PACKAGES = frozenset({"IDEAL", "PR", "SRK", "NRTL"})
 
 # SI unit strings accepted per spec name (v0.1 stores SI only).
 _SI = {
@@ -98,11 +115,22 @@ _SI = {
     "lk_recovery": {"1", "-", ""},
     "hk_recovery": {"1", "-", ""},
     "reflux_ratio_factor": {"1", "-", ""},
+    "number_of_stages": {"1", "-", ""},
+    "feed_stage": {"1", "-", ""},
+    "reflux_ratio": {"1", "-", ""},
+    "distillate_rate": {"mol/s"},
+    "volume": {"m3", "m³"},
+    "ua": {"W/K"},
+    "u_overall": {"W/m2/K", "W/(m2·K)", "W/m²K"},
+    "area": {"m2", "m²"},
 }
 _FRACTION_UNITS = {"1", "-", ""}
 
 # Interaction-parameter tables shipped with `thermo` (ChemSep, public domain data).
 _KIJ_TABLE = {"PR": "ChemSep PR"}
+
+# Key a unit solver may add to its results to return a profile (moved to results.profiles).
+_PROFILE = "__profile__"
 
 # Flow below this is treated as an empty stream (mol/s).
 _ZERO_FLOW = 1e-12
@@ -156,6 +184,19 @@ class _Thermo:
                 VolumeLiquids=self.props.VolumeLiquids,
                 equilibrium_basis="Psat",  # K_i = Psat_i / P
             )
+        elif self.package == "NRTL":
+            # Modified Raoult: ideal gas + NRTL liquid, τ_ij = b_ij / T (Renon & Prausnitz,
+            # AIChE J. 14 (1968) 135). Parameters: document → ChemSep NRTL table → ideal pair.
+            tau_bs, alphas = self._nrtl(fs, n)
+            gas = IdealGas(HeatCapacityGases=self.props.HeatCapacityGases)
+            model = NRTL(T=298.15, xs=[1.0 / n] * n, tau_bs=tau_bs, alpha_cs=alphas)
+            liquid = GibbsExcessLiquid(
+                VaporPressures=self.props.VaporPressures,
+                HeatCapacityGases=self.props.HeatCapacityGases,
+                VolumeLiquids=self.props.VolumeLiquids,
+                GibbsExcessModel=model,
+                equilibrium_basis="Psat",  # K_i = γ_i Psat_i / P
+            )
         else:
             kijs = self._kijs(fs, n)
             eos = PRMIX if self.package == "PR" else SRKMIX
@@ -182,6 +223,26 @@ class _Thermo:
                                           "thermo", None, i=row["i"], j=row["j"]))
         return kij
 
+    def _nrtl(self, fs: Flowsheet, n: int) -> tuple[list[list[float]], list[list[float]]]:
+        """NRTL b_ij (K) and α_ij matrices; a pair without data is treated as ideal (warning)."""
+        index = {cid: k for k, cid in enumerate(self.ids)}
+        b = [[0.0] * n for _ in range(n)]
+        alpha = [[0.0] * n for _ in range(n)]
+        missing: set[frozenset[str]] = set()
+        for row in binary_parameter_table(fs):
+            i, j = index[row["i"]], index[row["j"]]
+            if row["name"] == "nrtl_b":
+                b[i][j] = row["value"]
+            else:
+                alpha[i][j] = alpha[j][i] = row["value"]
+            if row["source"] == "missing":
+                missing.add(frozenset((row["i"], row["j"])))
+        for pair in sorted(missing, key=lambda p: sorted(index[x] for x in p)):
+            i, j = sorted(pair, key=index.__getitem__)
+            self.issues.append(_issue(Severity.WARNING, "missing_binary_parameter", "thermo", None,
+                                      i=i, j=j))
+        return b, alpha
+
     def Hf(self, zs: list[float]) -> float:
         """Σ z_i ΔHf_i (ideal gas, 298.15 K), J/mol: shifts thermo's H to a reaction basis."""
         return sum(z * hf for z, hf in zip(zs, self.constants.Hfgs))
@@ -196,7 +257,32 @@ class _Thermo:
     def flash_raw(self, zs: list[float], **spec: float) -> Any:
         """Run a `thermo` flash for composition `zs` (pure components need no `zs`)."""
         kwargs = dict(spec) if len(zs) == 1 else dict(spec, zs=zs)
-        return self.flasher.flash(**kwargs)
+        try:
+            return self.flasher.flash(**kwargs)
+        except Exception:
+            if set(spec) == {"P", "VF"} and 0 < spec["VF"] < 1 and len(zs) > 1:
+                return self._flash_PVF_bisect(zs, spec["P"], spec["VF"])
+            raise
+
+    def _flash_PVF_bisect(self, zs: list[float], P: float, VF: float) -> Any:
+        """P–VF flash by bisection on T between the bubble and dew points (PT flashes).
+
+        Fallback for `thermo` 0.6.1, whose two-phase P–VF solver can fail with activity
+        models; vapour fraction rises monotonically with T at fixed P and composition.
+        """
+        lo = self.flasher.flash(P=P, VF=0.0, zs=zs).T
+        hi = self.flasher.flash(P=P, VF=1.0, zs=zs).T
+        res = None
+        for _ in range(100):
+            T = 0.5 * (lo + hi)
+            res = self.flasher.flash(T=T, P=P, zs=zs)
+            if _vapor_fraction(res) < VF:
+                lo = T
+            else:
+                hi = T
+            if hi - lo < 1e-9 * T:
+                break
+        return res
 
     def flash(self, zs: list[float], **spec: float) -> _State:
         """Overall state per mole (F = 1); the caller rescales F."""
@@ -224,12 +310,59 @@ def database_kij(package: str, cas_i: str, cas_j: str) -> float | None:
     return None
 
 
-def binary_parameter_table(fs: Flowsheet) -> list[dict[str, Any]]:
-    """One row per component pair with the k_ij the engine will use and where it comes from.
+_NRTL_TABLE = "ChemSep NRTL"
+_NRTL_DEFAULT_ALPHA = 0.3
 
-    Order of precedence: a value in the document (its own `source`: user, literature, …),
-    then the database, else 0 with source "missing". Empty for IDEAL (no k_ij in Raoult's law).
+
+def _nrtl_rows(fs: Flowsheet) -> list[dict[str, Any]]:
+    """Per pair a < b: rows nrtl_b (a→b), nrtl_b (b→a) and nrtl_alpha, with sources.
+
+    A pair takes document values first; otherwise the ChemSep NRTL table (b_ij in K,
+    τ_ij = b_ij/T); otherwise b = 0 (ideal pair) and α = 0.3, marked "missing".
     """
+    given: dict[tuple[str, str, str], tuple[float, str]] = {}
+    for p in fs.thermo.binary_parameters:
+        name = p.name.lower()
+        if name == "nrtl_b":
+            given[("nrtl_b", p.i, p.j)] = (p.value, p.source)
+        elif name == "nrtl_alpha":
+            given[("nrtl_alpha", p.i, p.j)] = given[("nrtl_alpha", p.j, p.i)] = (p.value, p.source)
+    rows = []
+    comps = fs.components
+    for a in range(len(comps)):
+        for c in range(a + 1, len(comps)):
+            ci, cj = comps[a], comps[c]
+            pair = [ci.cas, cj.cas]
+            in_db = IPDB.has_ip_specific(_NRTL_TABLE, pair, "bij")
+            db_b = IPDB.get_ip_asymmetric_matrix(_NRTL_TABLE, pair, "bij") if in_db else None
+            db_alpha = IPDB.get_ip_specific(_NRTL_TABLE, pair, "alphaij") if in_db else None
+            for (x, y, k, m) in ((ci, cj, 0, 1), (cj, ci, 1, 0)):
+                if ("nrtl_b", x.id, y.id) in given:
+                    value, source = given[("nrtl_b", x.id, y.id)]
+                elif db_b is not None:
+                    value, source = float(db_b[k][m]), "database"
+                else:
+                    value, source = 0.0, "missing"
+                rows.append({"i": x.id, "j": y.id, "name": "nrtl_b", "value": value, "source": source})
+            if ("nrtl_alpha", ci.id, cj.id) in given:
+                value, source = given[("nrtl_alpha", ci.id, cj.id)]
+            elif db_alpha is not None:
+                value, source = float(db_alpha), "database"
+            else:
+                value, source = _NRTL_DEFAULT_ALPHA, "missing"
+            rows.append({"i": ci.id, "j": cj.id, "name": "nrtl_alpha", "value": value, "source": source})
+    return rows
+
+
+def binary_parameter_table(fs: Flowsheet) -> list[dict[str, Any]]:
+    """Binary parameters the engine will use, with where each comes from.
+
+    PR/SRK: one k_ij row per pair; NRTL: b_ij, b_ji and α_ij rows per pair (see `_nrtl_rows`).
+    Order of precedence: a value in the document (its own `source`: user, literature, …),
+    then the database, else a neutral value with source "missing". Empty for IDEAL.
+    """
+    if fs.thermo.package == "NRTL":
+        return _nrtl_rows(fs)
     if fs.thermo.package not in ("PR", "SRK"):
         return []
     given = {}
@@ -345,6 +478,7 @@ class ReferenceAdapter:
         blocks = solve_plan([u.id for u in fs.units], edges)
         states: dict[str, _State] = {}
         unit_results: dict[str, dict[str, dict[str, Any]]] = {}
+        profiles: dict[str, dict[str, Any]] = {}
 
         def solve_unit(uid: str) -> Issue | None:
             u = fs.unit(uid)
@@ -360,6 +494,9 @@ class ReferenceAdapter:
             for port, state in outlets.items():
                 states[outs[uid][port]] = state
             unit_results.pop(uid, None)
+            profile = results.pop(_PROFILE, None)
+            if profile is not None:
+                profiles[uid] = profile
             if results:
                 unit_results[uid] = results
             return None
@@ -381,6 +518,7 @@ class ReferenceAdapter:
             "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "streams": {sid: _state_out(st, th.ids) for sid, st in states.items()},
             "units": unit_results,
+            **({"profiles": profiles} if profiles else {}),
         }
         return SimulationResult(True, out, issues, self.name, self.version())
 
@@ -597,8 +735,16 @@ def _check_unit(u: Unit, ins: dict[str, str], outs: dict[str, str],
             need(p, outs)
         no_extra({"hot_in", "cold_in"}, ins)
         no_extra({"hot_out", "cold_out"}, outs)
-        issues += _one_of(u, ("hot_outlet_temperature", "cold_outlet_temperature", "duty"),
-                          required=True)
+        given = [n for n in ("hot_outlet_temperature", "cold_outlet_temperature", "duty", "ua")
+                 if n in u.specs]
+        if "u_overall" in u.specs or "area" in u.specs:
+            if not ("u_overall" in u.specs and "area" in u.specs):
+                issues.append(_missing("unit", u.id, "area" if "u_overall" in u.specs else "u_overall"))
+            given.append("u_overall · area")
+        if len(given) > 1:
+            issues.append(_error("conflicting_specs", "unit", u.id, target=u.id, specs=given))
+        elif not given:
+            issues.append(_missing("unit", u.id, "hot_outlet_temperature / cold_outlet_temperature / duty / ua"))
     elif t == "conversion_reactor":
         need("in", ins)
         need("out", outs)
@@ -632,12 +778,91 @@ def _check_unit(u: Unit, ins: dict[str, str], outs: dict[str, str],
                                      components=[key]))
         if lk and hk and lk == hk:
             issues.append(_error("same_keys", "unit", u.id, target=u.id))
+    elif t in ("cstr", "pfr"):
+        need("in", ins)
+        need("out", outs)
+        no_extra({"in"}, ins)
+        no_extra({"out"}, outs)
+        if "volume" not in u.specs:
+            issues.append(_missing("unit", u.id, "volume"))
+        elif u.specs["volume"].value <= 0:
+            issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec="volume", min=0, max=None))
+        issues += _one_of(u, ("temperature", "duty"), required=True)
+        issues += _one_of(u, ("pressure", "pressure_drop"), required=False)
+        if u.options.get("phase", "gas") not in ("gas", "liquid"):
+            issues.append(_error("invalid_option", "unit", u.id, target=u.id, option="phase"))
+        issues += _check_kinetics(u, comp_ids or [])
+    elif t == "equilibrium_reactor":
+        need("in", ins)
+        need("out", outs)
+        no_extra({"in"}, ins)
+        no_extra({"out"}, outs)
+        issues += _one_of(u, ("temperature", "duty"), required=True)
+        issues += _one_of(u, ("pressure", "pressure_drop"), required=False)
+        reactions = u.options.get("reactions")
+        if not isinstance(reactions, list) or not reactions:
+            issues.append(_missing("unit", u.id, "reactions"))
+        else:
+            for k, r in enumerate(reactions, start=1):
+                stoich = r.get("stoichiometry") if isinstance(r, dict) else None
+                if not isinstance(stoich, dict) or not stoich:
+                    issues.append(_error("invalid_reaction", "unit", u.id, target=u.id, reaction=k))
+                    continue
+                unknown = sorted(c for c in stoich if c not in (comp_ids or []))
+                if unknown:
+                    issues.append(_error("unknown_component", "unit", u.id, target=u.id, components=unknown))
+    elif t == "distillation_column":
+        need("in", ins)
+        for p in ("distillate", "bottoms"):
+            need(p, outs)
+        no_extra({"in"}, ins)
+        no_extra({"distillate", "bottoms"}, outs)
+        for name in ("number_of_stages", "feed_stage", "reflux_ratio", "distillate_rate"):
+            if name not in u.specs:
+                issues.append(_missing("unit", u.id, name))
+        n = u.specs["number_of_stages"].value if "number_of_stages" in u.specs else None
+        if n is not None and (n != int(n) or n < 3):
+            issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec="number_of_stages",
+                                 min=3, max=None))
+        if "feed_stage" in u.specs:
+            fs_ = u.specs["feed_stage"].value
+            if fs_ != int(fs_) or fs_ < 2 or (n is not None and fs_ > n - 1):
+                issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec="feed_stage",
+                                     min=2, max=(int(n) - 1) if n else None))
+        for name in ("reflux_ratio", "distillate_rate"):
+            if name in u.specs and u.specs[name].value <= 0:
+                issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec=name,
+                                     min=0, max=None))
     if "vapor_fraction" in u.specs and not 0 <= u.specs["vapor_fraction"].value <= 1:
         issues.append(_error("out_of_range", "unit", u.id, target=u.id,
                              spec="vapor_fraction", min=0, max=1))
     if "efficiency" in u.specs and not 0 < u.specs["efficiency"].value <= 1:
         issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec="efficiency",
                              min=0, max=1))
+    return issues
+
+
+def _check_kinetics(u: Unit, comp_ids: list[str]) -> list[Issue]:
+    reactions = u.options.get("reactions")
+    if not isinstance(reactions, list) or not reactions:
+        return [_missing("unit", u.id, "reactions")]
+    issues: list[Issue] = []
+    for k, r in enumerate(reactions, start=1):
+        stoich = r.get("stoichiometry") if isinstance(r, dict) else None
+        if not isinstance(stoich, dict) or not stoich:
+            issues.append(_error("invalid_reaction", "unit", u.id, target=u.id, reaction=k))
+            continue
+        orders = r.get("orders") or {}
+        unknown = sorted(c for c in list(stoich) + list(orders) if c not in comp_ids)
+        if unknown:
+            issues.append(_error("unknown_component", "unit", u.id, target=u.id, components=unknown))
+        k0, Ea = r.get("k0"), r.get("Ea", 0.0)
+        if not isinstance(k0, (int, float)) or k0 <= 0:
+            issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec=f"k0 {k}", min=0, max=None))
+        if not isinstance(Ea, (int, float)) or Ea < 0:
+            issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec=f"Ea {k}", min=0, max=None))
+        if any(not isinstance(v, (int, float)) or v < 0 for v in orders.values()):
+            issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec=f"orders {k}", min=0, max=None))
     return issues
 
 
@@ -892,10 +1117,42 @@ def _solve_heat_exchanger(u, inlets, outs, th, fs):
         c_out = _scaled(th.flash(cold.zs, T=u.specs["cold_outlet_temperature"].value, P=Pc), cold.F)  # type: ignore[arg-type]
         Q = cold.F * (c_out.H - cold.H)  # type: ignore[operator]
         h_out = _scaled(th.flash(hot.zs, P=Ph, H=hot.H - Q / hot.F), hot.F)  # type: ignore[arg-type, operator]
-    else:
+    elif "duty" in u.specs:
         Q = u.specs["duty"].value
         h_out = _scaled(th.flash(hot.zs, P=Ph, H=hot.H - Q / hot.F), hot.F)  # type: ignore[arg-type, operator]
         c_out = _scaled(th.flash(cold.zs, P=Pc, H=cold.H + Q / cold.F), cold.F)  # type: ignore[arg-type, operator]
+    else:
+        # Rating: given UA (or U·A), find Q with Q = UA·LMTD (counter-current, end temperatures).
+        UA = (u.specs["ua"].value if "ua" in u.specs
+              else u.specs["u_overall"].value * u.specs["area"].value)
+        if hot.T <= cold.T:
+            raise _InputError(_error("temperature_cross", "unit", u.id, target=u.id,
+                                     hot_end=round(hot.T - cold.T, 2), cold_end=round(hot.T - cold.T, 2)))
+
+        def outlets(Q: float) -> tuple[_State, _State]:
+            ho = _scaled(th.flash(hot.zs, P=Ph, H=hot.H - Q / hot.F), hot.F)  # type: ignore[arg-type, operator]
+            co = _scaled(th.flash(cold.zs, P=Pc, H=cold.H + Q / cold.F), cold.F)  # type: ignore[arg-type, operator]
+            return ho, co
+
+        def q_max() -> float:
+            # Largest duty without a temperature cross: neither stream passes the other's inlet T.
+            hot_lim = hot.F * (hot.H - th.flash(hot.zs, T=cold.T, P=Ph).H)  # type: ignore[arg-type, operator]
+            cold_lim = cold.F * (th.flash(cold.zs, T=hot.T, P=Pc).H - cold.H)  # type: ignore[arg-type, operator]
+            return min(hot_lim, cold_lim)
+
+        def residual(Q: float) -> float:
+            ho, co = outlets(Q)
+            a, b = hot.T - co.T, ho.T - cold.T
+            if a <= 0 or b <= 0:
+                return Q  # positive: too much duty
+            lmtd = (a - b) / math.log(a / b) if abs(a - b) > 1e-9 * max(a, b) else a
+            return Q - UA * lmtd
+
+        from scipy.optimize import brentq
+
+        hi = q_max() * (1 - 1e-9)
+        Q = brentq(residual, hi * 1e-12, hi, xtol=1e-9 * hi) if residual(hi) > 0 else hi
+        h_out, c_out = outlets(Q)
     dT_hot_end = hot.T - c_out.T  # hot inlet against cold outlet
     dT_cold_end = h_out.T - cold.T  # hot outlet against cold inlet
     results = {
@@ -1046,7 +1303,172 @@ def _solve_shortcut_column(u, inlets, outs, th, fs):
     }
 
 
+def _solve_kinetic_reactor(u, inlets, outs, th, fs):
+    """CSTR or PFR with power-law kinetics (see kinetics.py)."""
+    feed = inlets["in"]
+    P = _outlet_pressure(u, feed.P)
+    _require_positive_pressure(u, P)
+    if feed.F <= _ZERO_FLOW:
+        return {"out": _empty(feed.T, P)}, {"duty": _q(0.0, "W")}
+    index = {cid: k for k, cid in enumerate(th.ids)}
+    mws = th.constants.MWs
+    for k, r in enumerate(u.options["reactions"], start=1):
+        mass = sum(float(v) * mws[index[c]] for c, v in r["stoichiometry"].items())
+        scale = sum(abs(float(v)) * mws[index[c]] for c, v in r["stoichiometry"].items())
+        if abs(mass) > 1e-3 * scale:
+            raise _InputError(_error("unbalanced_reaction", "unit", u.id, target=u.id, reaction=k,
+                                     imbalance=round(mass, 4)))
+    laws = parse_rate_laws(u.options["reactions"], th.ids)
+    phase = u.options.get("phase", "gas")
+    V = u.specs["volume"].value
+    flows_in = [feed.F * z for z in feed.zs]  # type: ignore[union-attr]
+    H_in = feed.F * (feed.H + th.Hf(feed.zs))  # type: ignore[arg-type, operator]
+    T_fixed = u.specs["temperature"].value if "temperature" in u.specs else None
+    Q = u.specs["duty"].value if "duty" in u.specs else 0.0
+
+    def T_energy(flows: list[float], H_total: float) -> float:
+        F = sum(flows)
+        z = [f / F for f in flows]
+        return th.flash(z, P=P, H=H_total / F - th.Hf(z)).T
+
+    try:
+        if u.type == "cstr":
+            sol = solve_cstr(th, laws, flows_in, P, V, phase,
+                             (lambda fl: T_fixed) if T_fixed is not None else (lambda fl: T_energy(fl, H_in + Q)))
+        else:
+            sol = solve_pfr(th, laws, flows_in, P, V, phase,
+                            (lambda fl, v: T_fixed) if T_fixed is not None
+                            else (lambda fl, v: T_energy(fl, H_in + Q * v / V)))
+    except KineticsError as exc:
+        raise _InputError(_error(exc.code, "unit", u.id, target=u.id, **exc.params)) from exc
+    F = sum(sol.flows)
+    zs = [f / F for f in sol.flows]
+    out = _scaled(th.flash(zs, T=sol.T, P=P), F)
+    duty = F * (out.H + th.Hf(zs)) - H_in  # type: ignore[operator]
+    Vm_in = th.flasher.gas.to(T=feed.T, P=P, zs=feed.zs) if phase == "gas" else th.flasher.liquid.to(T=feed.T, P=P, zs=feed.zs)
+    results: dict[str, Any] = {f"extent_{k + 1}": _q(e, "mol/s") for k, e in enumerate(sol.extents)}
+    results.update({
+        "duty": _q(duty, "W"),
+        "temperature": _q(out.T, "K"),
+        "pressure": _q(P, "Pa"),
+        "space_time": _q(V / (feed.F * Vm_in.V()), "s"),
+        "vapor_fraction": _q(out.VF, "1"),
+    })
+    if sol.profile is not None:
+        prof = sol.profile
+        results[_PROFILE] = {
+            "axis": {"name": "volume", "unit": "m3", "values": prof["volume"]},
+            "series": {
+                "temperature": {"unit": "K", "values": prof["temperature"]},
+                **{f"x_{cid}": {"unit": "1", "values": [z[k] for z in prof["z"]]} for k, cid in enumerate(th.ids)},
+            },
+        }
+    return {"out": out}, results
+
+
+def _solve_equilibrium_reactor(u, inlets, outs, th, fs):
+    """Gas-phase chemical equilibrium (see equilibrium.py)."""
+    feed = inlets["in"]
+    P = _outlet_pressure(u, feed.P)
+    _require_positive_pressure(u, P)
+    if feed.F <= _ZERO_FLOW:
+        return {"out": _empty(feed.T, P)}, {"duty": _q(0.0, "W")}
+    index = {cid: k for k, cid in enumerate(th.ids)}
+    mws = th.constants.MWs
+    nus = []
+    for k, r in enumerate(u.options["reactions"], start=1):
+        nu = [0.0] * len(th.ids)
+        for c, v in r["stoichiometry"].items():
+            nu[index[c]] = float(v)
+        if abs(sum(n * w for n, w in zip(nu, mws))) > 1e-3 * sum(abs(n) * w for n, w in zip(nu, mws)):
+            raise _InputError(_error("unbalanced_reaction", "unit", u.id, target=u.id, reaction=k,
+                                     imbalance=round(sum(n * w for n, w in zip(nu, mws)), 4)))
+        nus.append(nu)
+    flows_in = [feed.F * z for z in feed.zs]  # type: ignore[union-attr]
+    H_in = feed.F * (feed.H + th.Hf(feed.zs))  # type: ignore[arg-type, operator]
+
+    def outlet(T: float) -> tuple[list[float], _State]:
+        xi = solve_equilibrium(th, nus, flows_in, P, T)
+        flows = [max(f + sum(nu[i] * x for nu, x in zip(nus, xi)), 0.0) for i, f in enumerate(flows_in)]
+        F = sum(flows)
+        zs = [f / F for f in flows]
+        return xi, _scaled(th.flash(zs, T=T, P=P), F)
+
+    try:
+        if "temperature" in u.specs:
+            T = u.specs["temperature"].value
+        else:
+            Q = u.specs["duty"].value
+
+            def energy(T: float) -> float:
+                _, out = outlet(T)
+                return out.F * (out.H + th.Hf(out.zs)) - H_in - Q  # type: ignore[operator, arg-type]
+
+            T = solve_adiabatic(energy, feed.T)
+        xi, out = outlet(T)
+    except EquilibriumError as exc:
+        raise _InputError(_error(exc.code, "unit", u.id, target=u.id, **exc.params)) from exc
+    duty = out.F * (out.H + th.Hf(out.zs)) - H_in  # type: ignore[operator, arg-type]
+    results: dict[str, Any] = {}
+    for k, (x, nu) in enumerate(zip(xi, nus), start=1):
+        results[f"extent_{k}"] = _q(x, "mol/s")
+        results[f"equilibrium_constant_{k}"] = _q(math.exp(ln_k(th, nu, T)), "1")
+    results.update({
+        "duty": _q(duty, "W"),
+        "temperature": _q(T, "K"),
+        "pressure": _q(P, "Pa"),
+        "vapor_fraction": _q(out.VF, "1"),
+    })
+    return {"out": out}, results
+
+
+def _solve_distillation_column(u, inlets, outs, th, fs):
+    """Rigorous column by the bubble-point method (see column.py)."""
+    feed = inlets["in"]
+    P = u.specs["pressure"].value if "pressure" in u.specs else feed.P
+    _require_positive_pressure(u, P)
+    if feed.F <= _ZERO_FLOW:
+        raise _InputError(_error("column_empty_feed", "unit", u.id, target=u.id))
+    if len(th.ids) < 2:
+        raise _InputError(_error("column_needs_two_components", "unit", u.id, target=u.id))
+    try:
+        r = solve_column(th, list(feed.zs), feed.F, feed.H, P,  # type: ignore[arg-type]
+                         int(u.specs["number_of_stages"].value), int(u.specs["feed_stage"].value),
+                         u.specs["reflux_ratio"].value, u.specs["distillate_rate"].value)
+    except ColumnError as exc:
+        raise _InputError(_error(exc.code, "unit", u.id, target=u.id, **exc.params)) from exc
+    N = len(r.T)
+    dist = _State(r.T[0], P, r.D, r.x[0], r.HL[0], 0.0)
+    bott = _State(r.T[N - 1], P, r.B, r.x[N - 1], r.HL[N - 1], 0.0)
+    return {"distillate": dist, "bottoms": bott}, {
+        "condenser_duty": _q(r.Qc, "W"),
+        "reboiler_duty": _q(r.Qr, "W"),
+        "top_temperature": _q(r.T[0], "K"),
+        "bottom_temperature": _q(r.T[N - 1], "K"),
+        "reflux_rate": _q(r.L[0], "mol/s"),
+        "boilup_rate": _q(r.V[N - 1], "mol/s"),
+        "iterations": _q(float(r.iterations), "1"),
+        "pressure": _q(P, "Pa"),
+        _PROFILE: {
+            "axis": {"name": "stage", "unit": "1", "values": [float(j + 1) for j in range(N)]},
+            "series": {
+                "temperature": {"unit": "K", "values": list(r.T)},
+                "liquid_flow": {"unit": "mol/s", "values": list(r.L)},
+                "vapor_flow": {"unit": "mol/s", "values": list(r.V)},
+                **{f"x_{cid}": {"unit": "1", "values": [r.x[j][k] for j in range(N)]}
+                   for k, cid in enumerate(th.ids)},
+                **{f"y_{cid}": {"unit": "1", "values": [r.y[j][k] for j in range(N)]}
+                   for k, cid in enumerate(th.ids)},
+            },
+        },
+    }
+
+
 _SOLVERS: dict[str, Solver] = {
+    "distillation_column": _solve_distillation_column,
+    "cstr": _solve_kinetic_reactor,
+    "equilibrium_reactor": _solve_equilibrium_reactor,
+    "pfr": _solve_kinetic_reactor,
     "pump": _solve_pump,
     "compressor": _solve_compressor,
     "heat_exchanger": _solve_heat_exchanger,

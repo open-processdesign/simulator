@@ -59,7 +59,7 @@
           "id": { "$ref": "#/$defs/id" },
           "type": {
             "enum": ["feed", "product", "mixer", "splitter", "flash", "heater", "heat_exchanger",
-                     "pump", "compressor", "valve", "conversion_reactor", "shortcut_column", "distillation_column"]
+                     "pump", "compressor", "valve", "conversion_reactor", "shortcut_column", "distillation_column", "cstr", "pfr"]
           },
           "label": { "type": "string" },
           "specs": { "type": "object", "additionalProperties": { "$ref": "#/$defs/quantity" } },

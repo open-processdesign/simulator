@@ -7,7 +7,7 @@ export const UNIT_SETS: UnitSet[] = ["SI", "METRIC", "ENGLISH"];
 
 export type Kind =
   | "temperature" | "temperature_difference" | "pressure" | "pressure_difference"
-  | "molar_flow" | "power" | "ua" | "fraction" | "number";
+  | "molar_flow" | "power" | "ua" | "fraction" | "number" | "volume" | "time" | "molar_energy";
 
 type Conversion = { unit: string; toDisplay: (si: number) => number; fromDisplay: (v: number) => number; digits: number };
 
@@ -31,6 +31,9 @@ const TABLE: Record<Kind, Record<UnitSet, Conversion>> = {
   molar_flow: { SI: id("mol/s", 4), METRIC: scale("kmol/h", 3.6, 3), ENGLISH: scale("lbmol/h", 3600 / LBMOL, 3) },
   power: { SI: id("W", 0), METRIC: scale("kW", 1e-3, 2), ENGLISH: scale("Btu/h", BTU_H, 0) },
   ua: { SI: id("W/K", 1), METRIC: scale("kW/K", 1e-3, 3), ENGLISH: scale("Btu/(h·°F)", BTU_H / 1.8, 1) },
+  volume: { SI: id("m³", 4), METRIC: id("m³", 4), ENGLISH: scale("ft³", 35.31466672, 3) },
+  time: { SI: id("s", 2), METRIC: id("s", 2), ENGLISH: id("s", 2) },
+  molar_energy: { SI: id("J/mol", 0), METRIC: scale("kJ/mol", 1e-3, 3), ENGLISH: scale("Btu/lbmol", 0.429922614, 1) },
   fraction: { SI: id("–", 4), METRIC: id("–", 4), ENGLISH: id("–", 4) },
   number: { SI: id("–", 2), METRIC: id("–", 2), ENGLISH: id("–", 2) },
 };
@@ -67,6 +70,11 @@ const KIND_BY_NAME: Record<string, Kind> = {
   top_temperature: "temperature",
   bottom_temperature: "temperature",
   iterations: "number",
+  volume: "volume",
+  space_time: "time",
+  activation_energy: "molar_energy",
+  rate_constant: "number",
+  order: "number",
 };
 
 /** Kind of a spec, state field or result by its OPD name (unknown names are dimensionless). */

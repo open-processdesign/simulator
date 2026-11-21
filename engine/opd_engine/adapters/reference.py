@@ -47,6 +47,10 @@ distill-   in, distillate,        number_of_stages (incl. condenser and reboiler
 ation_     bottoms                feed_stage (counted from the top), reflux_ratio,
 column                            distillate_rate; optional pressure; total condenser,
                                   partial reboiler; rigorous MESH (column.py, T15)
+cstr, pfr  in, out                volume (m³); exactly one of temperature, duty;
+                                  optional pressure *or* pressure_drop; options.phase
+                                  ("gas" | "liquid"), options.reactions = [{stoichiometry,
+                                  k0, Ea (J/mol), orders: {component: n}}] (kinetics.py)
 =========  =====================  ==========================================================
 
 Duty is heat added to the process stream (W): positive for heating, negative for cooling.
@@ -80,11 +84,12 @@ from .. import adapter as _adapter
 from ..adapter import Capabilities, Issue, OPDDocument, Severity, SimulationResult, Target
 from ..models import Flowsheet, Stream, Unit, check_references, load
 from .column import ColumnError, solve_column
+from .kinetics import KineticsError, parse_rate_laws, solve_cstr, solve_pfr
 from .recycle import Accelerator, Block, Edge, solve_plan
 
 UNIT_TYPES = frozenset({"feed", "product", "mixer", "splitter", "heater", "valve", "flash",
                         "pump", "compressor", "heat_exchanger", "conversion_reactor",
-                        "shortcut_column", "distillation_column"})
+                        "shortcut_column", "distillation_column", "cstr", "pfr"})
 THERMO_PACKAGES = frozenset({"IDEAL", "PR", "SRK", "NRTL"})
 
 # SI unit strings accepted per spec name (v0.1 stores SI only).
@@ -108,6 +113,7 @@ _SI = {
     "feed_stage": {"1", "-", ""},
     "reflux_ratio": {"1", "-", ""},
     "distillate_rate": {"mol/s"},
+    "volume": {"m3", "m³"},
 }
 _FRACTION_UNITS = {"1", "-", ""}
 
@@ -755,6 +761,20 @@ def _check_unit(u: Unit, ins: dict[str, str], outs: dict[str, str],
                                      components=[key]))
         if lk and hk and lk == hk:
             issues.append(_error("same_keys", "unit", u.id, target=u.id))
+    elif t in ("cstr", "pfr"):
+        need("in", ins)
+        need("out", outs)
+        no_extra({"in"}, ins)
+        no_extra({"out"}, outs)
+        if "volume" not in u.specs:
+            issues.append(_missing("unit", u.id, "volume"))
+        elif u.specs["volume"].value <= 0:
+            issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec="volume", min=0, max=None))
+        issues += _one_of(u, ("temperature", "duty"), required=True)
+        issues += _one_of(u, ("pressure", "pressure_drop"), required=False)
+        if u.options.get("phase", "gas") not in ("gas", "liquid"):
+            issues.append(_error("invalid_option", "unit", u.id, target=u.id, option="phase"))
+        issues += _check_kinetics(u, comp_ids or [])
     elif t == "distillation_column":
         need("in", ins)
         for p in ("distillate", "bottoms"):
@@ -783,6 +803,30 @@ def _check_unit(u: Unit, ins: dict[str, str], outs: dict[str, str],
     if "efficiency" in u.specs and not 0 < u.specs["efficiency"].value <= 1:
         issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec="efficiency",
                              min=0, max=1))
+    return issues
+
+
+def _check_kinetics(u: Unit, comp_ids: list[str]) -> list[Issue]:
+    reactions = u.options.get("reactions")
+    if not isinstance(reactions, list) or not reactions:
+        return [_missing("unit", u.id, "reactions")]
+    issues: list[Issue] = []
+    for k, r in enumerate(reactions, start=1):
+        stoich = r.get("stoichiometry") if isinstance(r, dict) else None
+        if not isinstance(stoich, dict) or not stoich:
+            issues.append(_error("invalid_reaction", "unit", u.id, target=u.id, reaction=k))
+            continue
+        orders = r.get("orders") or {}
+        unknown = sorted(c for c in list(stoich) + list(orders) if c not in comp_ids)
+        if unknown:
+            issues.append(_error("unknown_component", "unit", u.id, target=u.id, components=unknown))
+        k0, Ea = r.get("k0"), r.get("Ea", 0.0)
+        if not isinstance(k0, (int, float)) or k0 <= 0:
+            issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec=f"k0 {k}", min=0, max=None))
+        if not isinstance(Ea, (int, float)) or Ea < 0:
+            issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec=f"Ea {k}", min=0, max=None))
+        if any(not isinstance(v, (int, float)) or v < 0 for v in orders.values()):
+            issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec=f"orders {k}", min=0, max=None))
     return issues
 
 
@@ -1191,6 +1235,69 @@ def _solve_shortcut_column(u, inlets, outs, th, fs):
     }
 
 
+def _solve_kinetic_reactor(u, inlets, outs, th, fs):
+    """CSTR or PFR with power-law kinetics (see kinetics.py)."""
+    feed = inlets["in"]
+    P = _outlet_pressure(u, feed.P)
+    _require_positive_pressure(u, P)
+    if feed.F <= _ZERO_FLOW:
+        return {"out": _empty(feed.T, P)}, {"duty": _q(0.0, "W")}
+    index = {cid: k for k, cid in enumerate(th.ids)}
+    mws = th.constants.MWs
+    for k, r in enumerate(u.options["reactions"], start=1):
+        mass = sum(float(v) * mws[index[c]] for c, v in r["stoichiometry"].items())
+        scale = sum(abs(float(v)) * mws[index[c]] for c, v in r["stoichiometry"].items())
+        if abs(mass) > 1e-3 * scale:
+            raise _InputError(_error("unbalanced_reaction", "unit", u.id, target=u.id, reaction=k,
+                                     imbalance=round(mass, 4)))
+    laws = parse_rate_laws(u.options["reactions"], th.ids)
+    phase = u.options.get("phase", "gas")
+    V = u.specs["volume"].value
+    flows_in = [feed.F * z for z in feed.zs]  # type: ignore[union-attr]
+    H_in = feed.F * (feed.H + th.Hf(feed.zs))  # type: ignore[arg-type, operator]
+    T_fixed = u.specs["temperature"].value if "temperature" in u.specs else None
+    Q = u.specs["duty"].value if "duty" in u.specs else 0.0
+
+    def T_energy(flows: list[float], H_total: float) -> float:
+        F = sum(flows)
+        z = [f / F for f in flows]
+        return th.flash(z, P=P, H=H_total / F - th.Hf(z)).T
+
+    try:
+        if u.type == "cstr":
+            sol = solve_cstr(th, laws, flows_in, P, V, phase,
+                             (lambda fl: T_fixed) if T_fixed is not None else (lambda fl: T_energy(fl, H_in + Q)))
+        else:
+            sol = solve_pfr(th, laws, flows_in, P, V, phase,
+                            (lambda fl, v: T_fixed) if T_fixed is not None
+                            else (lambda fl, v: T_energy(fl, H_in + Q * v / V)))
+    except KineticsError as exc:
+        raise _InputError(_error(exc.code, "unit", u.id, target=u.id, **exc.params)) from exc
+    F = sum(sol.flows)
+    zs = [f / F for f in sol.flows]
+    out = _scaled(th.flash(zs, T=sol.T, P=P), F)
+    duty = F * (out.H + th.Hf(zs)) - H_in  # type: ignore[operator]
+    Vm_in = th.flasher.gas.to(T=feed.T, P=P, zs=feed.zs) if phase == "gas" else th.flasher.liquid.to(T=feed.T, P=P, zs=feed.zs)
+    results: dict[str, Any] = {f"extent_{k + 1}": _q(e, "mol/s") for k, e in enumerate(sol.extents)}
+    results.update({
+        "duty": _q(duty, "W"),
+        "temperature": _q(out.T, "K"),
+        "pressure": _q(P, "Pa"),
+        "space_time": _q(V / (feed.F * Vm_in.V()), "s"),
+        "vapor_fraction": _q(out.VF, "1"),
+    })
+    if sol.profile is not None:
+        prof = sol.profile
+        results[_PROFILE] = {
+            "axis": {"name": "volume", "unit": "m3", "values": prof["volume"]},
+            "series": {
+                "temperature": {"unit": "K", "values": prof["temperature"]},
+                **{f"x_{cid}": {"unit": "1", "values": [z[k] for z in prof["z"]]} for k, cid in enumerate(th.ids)},
+            },
+        }
+    return {"out": out}, results
+
+
 def _solve_distillation_column(u, inlets, outs, th, fs):
     """Rigorous column by the bubble-point method (see column.py)."""
     feed = inlets["in"]
@@ -1235,6 +1342,8 @@ def _solve_distillation_column(u, inlets, outs, th, fs):
 
 _SOLVERS: dict[str, Solver] = {
     "distillation_column": _solve_distillation_column,
+    "cstr": _solve_kinetic_reactor,
+    "pfr": _solve_kinetic_reactor,
     "pump": _solve_pump,
     "compressor": _solve_compressor,
     "heat_exchanger": _solve_heat_exchanger,

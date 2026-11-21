@@ -44,4 +44,4 @@ export function useUnits() {
 }
 
 const KINDS = new Set<string>(["temperature", "temperature_difference", "pressure", "pressure_difference",
-  "molar_flow", "power", "ua", "fraction", "number"]);
+  "molar_flow", "power", "ua", "fraction", "number", "volume", "time", "molar_energy"]);

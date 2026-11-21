@@ -22,7 +22,9 @@ export function QuantityField({ label, name, value, onCommit, compact = false }:
   const id = useId();
   const unit = units.unit(name);
   const display = value === undefined ? undefined : units.toDisplay(name, value);
+  const big = display !== undefined && display !== 0 && (Math.abs(display) >= 1e7 || Math.abs(display) < 1e-5);
   const shown = display === undefined ? ""
+    : big ? display.toExponential(6).replace(/\.?0+e/, "e")
     : Number(display.toPrecision(12)).toLocaleString(i18n.resolvedLanguage, { maximumFractionDigits: 10, useGrouping: false });
   const [text, setText] = useState(shown);
   useEffect(() => setText(shown), [shown]);

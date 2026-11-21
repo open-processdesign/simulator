@@ -26,7 +26,7 @@ ThermoPackage = Literal["IDEAL", "PR", "SRK", "NRTL", "UNIQUAC", "UNIFAC"]
 UnitType = Literal[
     "feed", "product", "mixer", "splitter", "flash", "heater", "heat_exchanger",
     "pump", "compressor", "valve", "conversion_reactor", "shortcut_column",
-    "distillation_column",
+    "distillation_column", "cstr", "pfr",
 ]
 ParameterSource = Literal["database", "user", "literature", "regression", "default"]
 

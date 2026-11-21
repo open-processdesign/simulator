@@ -74,6 +74,7 @@ function UnitPanel({ unit, issues, onDeleted }: { unit: Unit; issues: EngineIssu
       {unit.type === "feed" && <FeedEditor unit={unit} />}
       {unit.type === "conversion_reactor" && <ReactionsEditor unit={unit} />}
       {unit.type === "shortcut_column" && <KeysEditor unit={unit} />}
+      {(unit.type === "cstr" || unit.type === "pfr") && <KineticsEditor unit={unit} />}
 
       {own && (
         <section className="flex flex-col gap-1">
@@ -340,6 +341,63 @@ function KeysEditor({ unit }: { unit: Unit }) {
         </label>
       ))}
       <p className="text-xs text-muted">{t("flowsheet.column_note")}</p>
+    </fieldset>
+  );
+}
+
+type RateLaw = { stoichiometry: Record<string, number>; k0: number; Ea: number; orders: Record<string, number> };
+
+function KineticsEditor({ unit }: { unit: Unit }) {
+  const { t } = useTranslation();
+  const { doc, dispatch } = useFlowsheet();
+  const reactions = (unit.options?.reactions as RateLaw[] | undefined) ?? [];
+  const phase = (unit.options?.phase as string | undefined) ?? "gas";
+  const save = (next: RateLaw[]) => dispatch({ type: "set_options", id: unit.id, options: { reactions: next } });
+  const update = (k: number, patch: Partial<RateLaw>) => save(reactions.map((r, i) => (i === k ? { ...r, ...patch } : r)));
+  const setMap = (k: number, key: "stoichiometry" | "orders", cid: string, v: number | null) => {
+    const map = { ...reactions[k][key] };
+    if (v === null || v === 0) delete map[cid];
+    else map[cid] = v;
+    update(k, { [key]: map } as Partial<RateLaw>);
+  };
+
+  if (doc.components.length === 0) return <p className="text-sm text-muted">{t("flowsheet.no_components")}</p>;
+  return (
+    <fieldset className="flex flex-col gap-3 rounded-md border border-border bg-surface p-3">
+      <legend className="px-1 text-sm font-semibold">{t("flowsheet.kinetics")}</legend>
+      <label className="flex items-center justify-between gap-2 text-sm text-muted">
+        {t("flowsheet.phase")}
+        <select value={phase} onChange={(e) => dispatch({ type: "set_options", id: unit.id, options: { phase: e.target.value } })}
+          className="h-7 w-[11.5rem] rounded-sm border border-border-strong bg-surface px-2 text-sm text-text">
+          <option value="gas">{t("flowsheet.phase_gas")}</option>
+          <option value="liquid">{t("flowsheet.phase_liquid")}</option>
+        </select>
+      </label>
+      <p className="text-xs text-muted">{t("flowsheet.rate_hint")}</p>
+      {reactions.map((r, k) => (
+        <div key={k} className="flex flex-col gap-1.5 border-t border-border pt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">{t("flowsheet.reaction_n", { n: k + 1 })}</span>
+            <Button variant="ghost" size="sm" aria-label={t("flowsheet.remove_reaction", { n: k + 1 })}
+              onClick={() => save(reactions.filter((_, i) => i !== k))}>
+              <Trash2 aria-hidden />
+            </Button>
+          </div>
+          {doc.components.map((c) => (
+            <QuantityField key={`nu-${c.id}`} label={`ν ${c.name}`} name="number" value={r.stoichiometry[c.id]}
+              onCommit={(v) => setMap(k, "stoichiometry", c.id, v)} />
+          ))}
+          <QuantityField label={t("flowsheet.k0")} name="rate_constant" value={r.k0} onCommit={(v) => update(k, { k0: v ?? 0 })} />
+          <QuantityField label={t("flowsheet.Ea")} name="activation_energy" value={r.Ea} onCommit={(v) => update(k, { Ea: v ?? 0 })} />
+          {doc.components.map((c) => (
+            <QuantityField key={`n-${c.id}`} label={t("flowsheet.order_of", { name: c.name })} name="order" value={r.orders[c.id]}
+              onCommit={(v) => setMap(k, "orders", c.id, v)} />
+          ))}
+        </div>
+      ))}
+      <Button variant="secondary" size="sm" onClick={() => save([...reactions, { stoichiometry: {}, k0: 1, Ea: 0, orders: {} }])}>
+        {t("flowsheet.add_reaction")}
+      </Button>
     </fieldset>
   );
 }

@@ -16,7 +16,9 @@ export function ProfileCharts({ unitId, profile, doc }: { unitId: string; profil
   const units = useUnits();
   const [table, setTable] = useState(false);
   const lang = i18n.resolvedLanguage;
-  const stages = profile.axis.values;
+  const isStage = profile.axis.name === "stage";
+  const stages = isStage ? profile.axis.values : profile.axis.values.map((v) => units.toDisplay(profile.axis.name, v));
+  const axisLabel = isStage ? t("profiles.stage") : `${t(`flowsheet.specs.${profile.axis.name}`, { defaultValue: profile.axis.name })} [${units.unit(profile.axis.name)}]`;
   const temps = profile.series.temperature?.values.map((v) => units.toDisplay("temperature", v)) ?? [];
   const comps = doc.components
     .map((c, k) => ({ id: c.id, name: c.name, color: `var(--opd-series-${(k % 8) + 1})`, values: profile.series[`x_${c.id}`]?.values }))
@@ -26,7 +28,7 @@ export function ProfileCharts({ unitId, profile, doc }: { unitId: string; profil
   return (
     <section aria-label={t("profiles.title", { id: unitId })} className="flex flex-col gap-2 rounded-md border border-border bg-surface p-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold"><span className="num">{unitId}</span> · {t("profiles.title_short")}</h3>
+        <h3 className="text-sm font-semibold"><span className="num">{unitId}</span> · {t(isStage ? "profiles.title_short" : "profiles.title_length")}</h3>
         <button type="button" className="text-xs text-accent hover:underline" onClick={() => setTable((v) => !v)}>
           {table ? t("profiles.show_chart") : t("profiles.show_table")}
         </button>
@@ -36,20 +38,20 @@ export function ProfileCharts({ unitId, profile, doc }: { unitId: string; profil
           <table className="w-full text-xs">
             <thead className="sticky top-0 bg-surface-muted text-muted">
               <tr>
-                <th className="px-2 py-1 text-left font-medium">{t("profiles.stage")}</th>
+                <th className="px-2 py-1 text-left font-medium">{axisLabel}</th>
                 <th className="px-2 py-1 text-right font-medium">T [{units.unit("temperature")}]</th>
-                <th className="px-2 py-1 text-right font-medium">L [{units.unit("molar_flow")}]</th>
-                <th className="px-2 py-1 text-right font-medium">V [{units.unit("molar_flow")}]</th>
+                {isStage && <th className="px-2 py-1 text-right font-medium">L [{units.unit("molar_flow")}]</th>}
+                {isStage && <th className="px-2 py-1 text-right font-medium">V [{units.unit("molar_flow")}]</th>}
                 {comps.map((c) => <th key={c.id} className="px-2 py-1 text-right font-medium">x {c.name}</th>)}
               </tr>
             </thead>
             <tbody>
               {stages.map((s, j) => (
                 <tr key={s} className="border-t border-border">
-                  <td className="num px-2 py-0.5">{s}</td>
+                  <td className="num px-2 py-0.5">{isStage ? s : formatNumber(s, lang, 4)}</td>
                   <td className="num px-2 py-0.5 text-right">{formatNumber(temps[j], lang, 2)}</td>
-                  <td className="num px-2 py-0.5 text-right">{formatNumber(units.toDisplay("molar_flow", profile.series.liquid_flow?.values[j] ?? 0), lang, 3)}</td>
-                  <td className="num px-2 py-0.5 text-right">{formatNumber(units.toDisplay("molar_flow", profile.series.vapor_flow?.values[j] ?? 0), lang, 3)}</td>
+                  {isStage && <td className="num px-2 py-0.5 text-right">{formatNumber(units.toDisplay("molar_flow", profile.series.liquid_flow?.values[j] ?? 0), lang, 3)}</td>}
+                  {isStage && <td className="num px-2 py-0.5 text-right">{formatNumber(units.toDisplay("molar_flow", profile.series.vapor_flow?.values[j] ?? 0), lang, 3)}</td>}
                   {comps.map((c) => <td key={c.id} className="num px-2 py-0.5 text-right">{formatNumber(c.values[j], lang, 4)}</td>)}
                 </tr>
               ))}
@@ -64,21 +66,21 @@ export function ProfileCharts({ unitId, profile, doc }: { unitId: string; profil
             series={[{ id: "T", name: t("flowsheet.specs.temperature"), color: "var(--opd-series-1)", values: temps }]}
             digits={2}
             lang={lang}
-            stageLabel={t("profiles.stage")}
+            stageLabel={axisLabel}
           />
           <LineChart
-            title={t("profiles.liquid_composition")}
+            title={t(isStage ? "profiles.liquid_composition" : "profiles.composition")}
             stages={stages}
             series={comps}
             digits={4}
             lang={lang}
-            stageLabel={t("profiles.stage")}
+            stageLabel={axisLabel}
             yMin={0}
             yMax={1}
           />
         </div>
       )}
-      <p className="text-xs text-subtle">{t("profiles.note")}</p>
+      {isStage && <p className="text-xs text-subtle">{t("profiles.note")}</p>}
     </section>
   );
 }
@@ -93,6 +95,13 @@ function niceTicks(min: number, max: number, count = 5): number[] {
   const out: number[] = [];
   for (let v = Math.ceil(min / step) * step; v <= max + 1e-9 * step; v += step) out.push(Number(v.toPrecision(12)));
   return out;
+}
+
+/** Direct labels at line ends, pushed apart so they never overlap (min 12 px). */
+function endLabels(labels: { id: string; name: string; y: number }[]): { id: string; name: string; y: number }[] {
+  const sorted = [...labels].sort((a, b) => a.y - b.y);
+  for (let k = 1; k < sorted.length; k++) sorted[k].y = Math.max(sorted[k].y, sorted[k - 1].y + 12);
+  return sorted;
 }
 
 function LineChart({ title, stages, series, digits, lang, stageLabel, yMin, yMax }: {
@@ -112,12 +121,15 @@ function LineChart({ title, stages, series, digits, lang, stageLabel, yMin, yMax
   const lo = yMin ?? Math.min(...all), hi = yMax ?? Math.max(...all);
   const pad = yMin === undefined ? (hi - lo || 1) * 0.08 : 0;
   const y0 = lo - pad, y1 = hi + pad;
-  const sx = (s: number) => m.l + ((s - stages[0]) / Math.max(stages[stages.length - 1] - stages[0], 1)) * (W - m.l - m.r);
+  const sx = (s: number) => m.l + ((s - stages[0]) / (stages[stages.length - 1] - stages[0] || 1)) * (W - m.l - m.r);
   const sy = (v: number) => m.t + (1 - (v - y0) / (y1 - y0 || 1)) * (H - m.t - m.b);
   const yTicks = useMemo(() => niceTicks(y0, y1, 4), [y0, y1]);
   const step = yTicks.length > 1 ? yTicks[1] - yTicks[0] : 1;
   const tickDecimals = (String(Number(step.toPrecision(6))).split(".")[1] ?? "").length;
-  const xTicks = useMemo(() => niceTicks(stages[0], stages[stages.length - 1], 6).filter((v) => Number.isInteger(v)), [stages]);
+  const xStep = (stages[stages.length - 1] - stages[0]) / 6 || 1;
+  const xDecimals = Math.min(4, Math.max(0, -Math.floor(Math.log10(xStep)) + 1));
+  const integerAxis = stages.every((v) => Number.isInteger(v));
+  const xTicks = useMemo(() => niceTicks(stages[0], stages[stages.length - 1], 6).filter((v) => !integerAxis || Number.isInteger(v)), [stages, integerAxis]);
 
   const onMove = (e: React.MouseEvent<SVGRectElement>) => {
     const rect = (e.currentTarget.ownerSVGElement as SVGSVGElement).getBoundingClientRect();
@@ -153,7 +165,7 @@ function LineChart({ title, stages, series, digits, lang, stageLabel, yMin, yMax
           </g>
         ))}
         {xTicks.map((v) => (
-          <text key={v} x={sx(v)} y={H - m.b + 14} textAnchor="middle" fontSize={10} fill="var(--opd-text-muted)" fontFamily="var(--opd-font-num)">{v}</text>
+          <text key={v} x={sx(v)} y={H - m.b + 14} textAnchor="middle" fontSize={10} fill="var(--opd-text-muted)" fontFamily="var(--opd-font-num)">{formatNumber(v, lang, integerAxis ? 0 : xDecimals)}</text>
         ))}
         <text x={(m.l + W - m.r) / 2} y={H - 2} textAnchor="middle" fontSize={10} fill="var(--opd-text-muted)">{stageLabel}</text>
         <g clipPath={`url(#${clip})`}>
@@ -162,8 +174,8 @@ function LineChart({ title, stages, series, digits, lang, stageLabel, yMin, yMax
               points={s.values.map((v, j) => `${sx(stages[j])},${sy(v)}`).join(" ")} />
           ))}
         </g>
-        {series.length > 1 && series.length <= 4 && series.map((s) => (
-          <text key={s.id} x={W - m.r + 6} y={sy(s.values[s.values.length - 1])} dy="0.32em" fontSize={10} fill="var(--opd-text-muted)">{s.name}</text>
+        {series.length > 1 && series.length <= 4 && endLabels(series.map((s) => ({ id: s.id, name: s.name, y: sy(s.values[s.values.length - 1]) }))).map((l) => (
+          <text key={l.id} x={W - m.r + 6} y={l.y} dy="0.32em" fontSize={10} fill="var(--opd-text-muted)">{l.name}</text>
         ))}
         {hover !== null && (
           <g pointerEvents="none">
@@ -179,7 +191,7 @@ function LineChart({ title, stages, series, digits, lang, stageLabel, yMin, yMax
       {hover !== null && (
         <div role="tooltip" style={sx(stages[hover]) > W * 0.55 ? { left: `${(m.l / W) * 100 + 1}%` } : { right: `${(m.r / W) * 100 + 1}%` }}
           className="pointer-events-none absolute top-10 rounded-sm border border-border bg-surface px-2 py-1 text-xs shadow-[var(--opd-shadow)]">
-          <div className="text-muted">{stageLabel} <span className="num text-text">{stages[hover]}</span></div>
+          <div className="text-muted">{stageLabel} <span className="num text-text">{formatNumber(stages[hover], lang, integerAxis ? 0 : 4)}</span></div>
           {series.map((s) => (
             <div key={s.id} className="flex items-center gap-1.5">
               <span className="inline-block size-2 rounded-full" style={{ background: s.color }} />

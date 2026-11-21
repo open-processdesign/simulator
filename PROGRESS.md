@@ -113,3 +113,8 @@ Template:
 - Done: `results.profiles` in schema and models; rigorous column stores stage profiles; Results step shows temperature and liquid-composition charts (hover tooltip, legend, direct labels, unit sets) with a table view. Series colours validated with the dataviz palette validator (all hard checks pass; contrast WARN handled by labels + table).
 - Tests: engine 95 passed (profiles stored, schema-valid); web 51 passed (charts, table in metric units). Rendered and checked in Chrome.
 - PR: #17 (based on PR #16).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T17
+- Done: `engine/opd_engine/adapters/kinetics.py` (power-law rates, CSTR and PFR solvers), `cstr`/`pfr` units in engine, schema, models and UI (palette, rate-law editor with phase, k₀, Eₐ, orders; volume/time/energy unit kinds), PFR length profiles reuse the profile charts (now generic axis), example `ethane-cracking-pfr.opd.json`. Fixes: chart x-scale for small ranges, non-overlapping end labels, exponent display for very large/small inputs.
+- Tests: engine 105 passed — first-order CSTR and PFR vs. closed form at three volumes, second-order CSTR vs. its quadratic, Arrhenius dependence, adiabatic PFR outlet T equals the adiabatic conversion reactor at the same conversion, monotonic exothermic profile, input errors. Web 51 passed. Rendered in Chrome in metric units.
+- PR: #18 (based on PR #17).

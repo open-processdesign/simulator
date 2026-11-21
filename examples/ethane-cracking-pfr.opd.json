@@ -1,0 +1,128 @@
+{
+  "format": "opd-flowsheet",
+  "version": "0.1",
+  "name": "Ethane cracking PFR",
+  "description": "C2H6 → C2H4 + H2 in an isothermal plug-flow reactor at 1100 K and 6 atm. First-order kinetics after Fogler's ethane-cracking example (k = 0.072 s⁻¹ at 1000 K, Ea = 82 kcal/mol); a teaching case, not a furnace design.",
+  "components": [
+    {
+      "id": "ethane",
+      "name": "ethane",
+      "cas": "74-84-0",
+      "formula": "C2H6"
+    },
+    {
+      "id": "ethylene",
+      "name": "ethylene",
+      "cas": "74-85-1",
+      "formula": "C2H4"
+    },
+    {
+      "id": "hydrogen",
+      "name": "hydrogen",
+      "cas": "1333-74-0",
+      "formula": "H2"
+    }
+  ],
+  "thermo": {
+    "package": "PR"
+  },
+  "units": [
+    {
+      "id": "FEED-1",
+      "type": "feed",
+      "label": "Ethane"
+    },
+    {
+      "id": "R-1",
+      "type": "pfr",
+      "label": "Cracking coil",
+      "specs": {
+        "volume": {
+          "value": 0.04,
+          "unit": "m3"
+        },
+        "temperature": {
+          "value": 1100.0,
+          "unit": "K"
+        }
+      },
+      "options": {
+        "phase": "gas",
+        "reactions": [
+          {
+            "stoichiometry": {
+              "ethane": -1,
+              "ethylene": 1,
+              "hydrogen": 1
+            },
+            "k0": 5.998749913607103e+16,
+            "Ea": 343088.0,
+            "orders": {
+              "ethane": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "PROD-1",
+      "type": "product",
+      "label": "Cracked gas"
+    }
+  ],
+  "streams": [
+    {
+      "id": "S1",
+      "from": {
+        "unit": "FEED-1",
+        "port": "out"
+      },
+      "to": {
+        "unit": "R-1",
+        "port": "in"
+      },
+      "state": {
+        "temperature": {
+          "value": 1100.0,
+          "unit": "K"
+        },
+        "pressure": {
+          "value": 607950,
+          "unit": "Pa"
+        },
+        "molar_flow": {
+          "value": 5.0,
+          "unit": "mol/s"
+        },
+        "mole_fractions": {
+          "ethane": 1.0
+        }
+      }
+    },
+    {
+      "id": "S2",
+      "from": {
+        "unit": "R-1",
+        "port": "out"
+      },
+      "to": {
+        "unit": "PROD-1",
+        "port": "in"
+      }
+    }
+  ],
+  "layout": {
+    "FEED-1": {
+      "x": 0,
+      "y": 100
+    },
+    "R-1": {
+      "x": 200,
+      "y": 100
+    },
+    "PROD-1": {
+      "x": 400,
+      "y": 100
+    }
+  }
+}

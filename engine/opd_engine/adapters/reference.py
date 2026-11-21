@@ -89,7 +89,7 @@ from .. import adapter as _adapter
 from ..adapter import Capabilities, Issue, OPDDocument, Severity, SimulationResult, Target
 from ..models import Flowsheet, Stream, Unit, check_references, load
 from .column import ColumnError, solve_column
-from .equilibrium import EquilibriumError, ln_k, solve_adiabatic, solve_equilibrium
+from .equilibrium import EquilibriumError, ln_k, phase_ln_k, solve_adiabatic, solve_equilibrium
 from .kinetics import KineticsError, parse_rate_laws, solve_cstr, solve_pfr
 from .recycle import Accelerator, Block, Edge, solve_plan
 
@@ -132,6 +132,8 @@ _KIJ_TABLE = {"PR": "ChemSep PR"}
 
 # Key a unit solver may add to its results to return a profile (moved to results.profiles).
 _PROFILE = "__profile__"
+# Key a unit solver may add with a list of warning issues (the last solve of a unit wins).
+_WARNINGS = "__warnings__"
 
 # Flow below this is treated as an empty stream (mol/s).
 _ZERO_FLOW = 1e-12
@@ -300,6 +302,11 @@ class _Thermo:
             if len(nonzero) == 1:
                 return _PureResult(self._pure_thermo(nonzero[0]).flash_raw([1.0], **spec),
                                    nonzero[0], len(zs))
+            if self.package == "UNIQUAC" and len(nonzero) < len(zs):
+                # thermo's UNIQUAC divides by x_i: absent components get a trace (1e-12).
+                zs = [max(z, 1e-12) for z in zs]
+                total = sum(zs)
+                zs = [z / total for z in zs]
         kwargs = dict(spec) if len(zs) == 1 else dict(spec, zs=zs)
         try:
             return self.flasher.flash(**kwargs)
@@ -587,6 +594,7 @@ class ReferenceAdapter:
         states: dict[str, _State] = {}
         unit_results: dict[str, dict[str, dict[str, Any]]] = {}
         profiles: dict[str, dict[str, Any]] = {}
+        unit_warnings: dict[str, list[Issue]] = {}
 
         def solve_unit(uid: str) -> Issue | None:
             u = fs.unit(uid)
@@ -605,6 +613,7 @@ class ReferenceAdapter:
             profile = results.pop(_PROFILE, None)
             if profile is not None:
                 profiles[uid] = profile
+            unit_warnings[uid] = results.pop(_WARNINGS, [])
             if results:
                 unit_results[uid] = results
             return None
@@ -618,6 +627,8 @@ class ReferenceAdapter:
                 issues.append(problem)
                 return self._result(doc, False, issues)
 
+        for found in unit_warnings.values():
+            issues += found
         out = copy.deepcopy(doc)
         out["results"] = {
             "engine": self.name,
@@ -922,6 +933,13 @@ def _check_unit(u: Unit, ins: dict[str, str], outs: dict[str, str],
                 unknown = sorted(c for c in stoich if c not in (comp_ids or []))
                 if unknown:
                     issues.append(_error("unknown_component", "unit", u.id, target=u.id, components=unknown))
+                corr = r.get("ln_k")
+                if corr is not None and not (
+                        isinstance(corr, dict) and corr and set(corr) <= {"a", "b", "c"}
+                        and all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in corr.values())):
+                    issues.append(_error("invalid_option", "unit", u.id, target=u.id, option=f"ln_k {k}"))
+        if u.options.get("phase", "gas") not in ("gas", "liquid"):
+            issues.append(_error("invalid_option", "unit", u.id, target=u.id, option="phase"))
     elif t == "distillation_column":
         need("in", ins)
         for p in ("distillate", "bottoms"):
@@ -1582,7 +1600,7 @@ def _solve_kinetic_reactor(u, inlets, outs, th, fs):
 
 
 def _solve_equilibrium_reactor(u, inlets, outs, th, fs):
-    """Gas-phase chemical equilibrium (see equilibrium.py)."""
+    """Chemical equilibrium in the gas or liquid phase (see equilibrium.py)."""
     feed = inlets["in"]
     P = _outlet_pressure(u, feed.P)
     _require_positive_pressure(u, P)
@@ -1601,9 +1619,11 @@ def _solve_equilibrium_reactor(u, inlets, outs, th, fs):
         nus.append(nu)
     flows_in = [feed.F * z for z in feed.zs]  # type: ignore[union-attr]
     H_in = feed.F * (feed.H + th.Hf(feed.zs))  # type: ignore[arg-type, operator]
+    phase = u.options.get("phase", "gas")
+    correlations = [r.get("ln_k") for r in u.options["reactions"]]
 
     def outlet(T: float) -> tuple[list[float], _State]:
-        xi = solve_equilibrium(th, nus, flows_in, P, T)
+        xi = solve_equilibrium(th, nus, flows_in, P, T, phase, correlations)
         flows = [max(f + sum(nu[i] * x for nu, x in zip(nus, xi)), 0.0) for i, f in enumerate(flows_in)]
         F = sum(flows)
         zs = [f / F for f in flows]
@@ -1627,13 +1647,20 @@ def _solve_equilibrium_reactor(u, inlets, outs, th, fs):
     results: dict[str, Any] = {}
     for k, (x, nu) in enumerate(zip(xi, nus), start=1):
         results[f"extent_{k}"] = _q(x, "mol/s")
-        results[f"equilibrium_constant_{k}"] = _q(math.exp(ln_k(th, nu, T)), "1")
+        results[f"equilibrium_constant_{k}"] = _q(
+            math.exp(phase_ln_k(th, nu, T, P, phase, correlations[k - 1])), "1")
+    issues: list[Issue] = []
+    if (phase == "liquid" and out.VF > 0.01) or (phase == "gas" and out.VF < 0.99):
+        issues.append(_issue(Severity.WARNING, "equilibrium_phase_mismatch", "unit", u.id,
+                             target=u.id, phase=phase, vapor_fraction=round(out.VF, 3)))
     results.update({
         "duty": _q(duty, "W"),
         "temperature": _q(T, "K"),
         "pressure": _q(P, "Pa"),
         "vapor_fraction": _q(out.VF, "1"),
     })
+    if issues:
+        results[_WARNINGS] = issues
     return {"out": out}, results
 
 

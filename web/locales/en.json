@@ -72,6 +72,7 @@
     "pump_vapor_inlet": "{{target}}: the pump inlet contains vapour (vapour fraction {{vapor_fraction}}). Cool or flash the stream first.",
     "compressor_liquid_inlet": "{{target}}: the compressor inlet contains liquid (vapour fraction {{vapor_fraction}}). Heat or separate the stream first.",
     "hx_empty_side": "{{target}}: one side of the heat exchanger has no flow.",
+    "internal_temperature_cross": "{{target}}: temperature cross inside the exchanger — approach {{approach}} K at {{at}} of the duty (from the cold end). The ends look fine, but a phase change bends a heat curve. Lower the duty or change the specification.",
     "temperature_cross": "{{target}}: temperature cross — approach at the hot end {{hot_end}} K, at the cold end {{cold_end}} K. Change the specification.",
     "invalid_reaction": "{{target}}: reaction {{reaction}} has no stoichiometry.",
     "invalid_reaction_key": "{{target}}: the key component of reaction {{reaction}} must be a reactant (negative coefficient).",

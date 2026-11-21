@@ -102,10 +102,12 @@ def test_heat_exchanger_energy_balance_and_cross_detection():
     res2, _ = solve(doc2)
     assert res2["units"]["E-1"]["duty"]["value"] == pytest.approx(Q, rel=1e-6)
     assert res2["units"]["E-1"]["hot_outlet_temperature"]["value"] == pytest.approx(330.0, abs=1e-4)
-    # LMTD from the reported end approaches.
+    # LMTD from the reported end approaches; zoned UA close to Q/LMTD without phase change.
     a, b = e["approach_hot_end"]["value"], e["approach_cold_end"]["value"]
     assert e["lmtd"]["value"] == pytest.approx((a - b) / math.log(a / b))
-    assert e["ua"]["value"] == pytest.approx(Q / e["lmtd"]["value"])
+    assert e["ua"]["value"] == pytest.approx(Q / e["mean_temperature_difference"]["value"])
+    assert e["ua"]["value"] == pytest.approx(Q / e["lmtd"]["value"], rel=0.02)
+    assert e["minimum_approach"]["value"] == pytest.approx(min(a, b), abs=1e-9)
     # Cooling the hot side below the cold inlet is a temperature cross.
     doc["units"][0]["specs"] = {"hot_outlet_temperature": q(290.0, "K")}
     result = ENGINE.simulate(doc)

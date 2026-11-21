@@ -72,6 +72,7 @@
     "pump_vapor_inlet": "{{target}}: pompa girişinde buhar var (buhar kesri {{vapor_fraction}}). Akımı önce soğutun veya flaşlayın.",
     "compressor_liquid_inlet": "{{target}}: kompresör girişinde sıvı var (buhar kesri {{vapor_fraction}}). Akımı önce ısıtın veya ayırın.",
     "hx_empty_side": "{{target}}: ısı değiştiricinin bir tarafında akış yok.",
+    "internal_temperature_cross": "{{target}}: ısı değiştiricinin içinde sıcaklık kesişmesi — soğuk uçtan görevin {{at}} kadarında yaklaşma {{approach}} K. Uçlar sorunsuz görünse de faz değişimi bir ısı eğrisini büküyor. Görevi azaltın veya spesifikasyonu değiştirin.",
     "temperature_cross": "{{target}}: sıcaklık kesişmesi — sıcak uçta yaklaşım {{hot_end}} K, soğuk uçta {{cold_end}} K. Belirtimi değiştirin.",
     "invalid_reaction": "{{target}}: {{reaction}}. reaksiyonun stokiyometrisi yok.",
     "invalid_reaction_key": "{{target}}: {{reaction}}. reaksiyonun anahtar bileşeni bir reaktan olmalı (negatif katsayı).",

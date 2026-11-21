@@ -22,7 +22,7 @@ Night sessions until the demo (Mon/Wed/Sat): 21, 23, 25, 28, 30 Nov · 2, 5, 7, 
 | T07 | **Run + Results.** Run button → engine runtime; stream table (T, P, flow, phase fraction, composition), unit results, issue list that highlights the unit/stream on the canvas. | T04, T06 | review (PR #8) |
 | T08 | **Recycle loops.** Tear-stream selection + Wegstein / direct substitution in the reference adapter, with convergence report. Cite textbook source. | T04 | review (PR #9) |
 | T09 | **More demo units** (reference adapter, from textbooks): Pump, Compressor, Heat exchanger (two-stream, energy balance), Conversion reactor, Shortcut column (Fenske–Underwood–Gilliland). One unit per session if needed. | T04 | review (PR #10) |
-| T10 | **Save/load + deploy.** Save/open OPD JSON file, example gallery (flash drum, simple HDA-like loop), disclaimer banner, GitHub Pages deployment via Actions. | T07 | wip |
+| T10 | **Save/load + deploy.** Save/open OPD JSON file, example gallery (flash drum, simple HDA-like loop), disclaimer banner, GitHub Pages deployment via Actions. | T07 | review (PR #11) |
 | T11 | **Demo check.** Build one process end-to-end in both languages, fix blockers, update README with link and screenshots. | T08, T09, T10 | todo |
 
 ## After the demo — DWSIM engine (needs a host, see D012)

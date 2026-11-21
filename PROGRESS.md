@@ -75,3 +75,9 @@ Template:
 - Tests: engine 75 passed — pump power vs. ṁΔP/(ρη) for water; compressor vs. ideal-gas isentropic relation (N2, 1→3 bar); exchanger duty from both sides, LMTD/UA, temperature cross; HDA heat of reaction vs. formation enthalpies (−42 kJ/mol); shortcut column vs. closed-form binary Fenske and Underwood; all examples solve. Web 35 passed; all examples also solve in Pyodide.
 - PR: #10 (based on PR #9).
 - Next: T10 (save/load, example gallery, deploy).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T10
+- Done: File menu (New, Open…, Save as file, Examples), editable process name, browser draft restored on reload, example gallery from `examples/` (flash drum, benzene–toluene column, HDA recycle loop), GitHub Pages workflow (test + build + deploy on push to main). EN/TR strings.
+- Tests: web 41 passed (parsing, file names incl. Turkish letters, draft, gallery, open/save via the menu, bad file message). End-to-end in Chrome: HDA example opened from the menu, run in < 1 s (recycle converged in 10 iterations), Turkish UI with decimal commas, draft kept after reload.
+- PR: #11 (based on PR #10). Maintainer action: Q6 (turn on Pages).
+- Next: T11 (demo check, README with link and screenshots) after the PRs are merged and Pages is on.

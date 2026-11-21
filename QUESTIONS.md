@@ -13,6 +13,9 @@ Default: keep.
 **Q5 · Antoine constants check (T04 test).** The Raoult hand-calculation test uses benzene/toluene Antoine constants cited as Felder & Rousseau, Table B.4 (benzene 6.89272 / 1203.531 / 219.888; toluene 6.95805 / 1346.773 / 219.693; log10 mmHg, °C). Please compare with your copy of the book and correct them in `engine/tests/test_reference_adapter.py` if they differ.
 Default: keep; the test tolerance (ΔVF ≤ 0.01) also covers other common Antoine sets.
 
+**Q6 · Turn on GitHub Pages (T10).** Settings → Pages → Build and deployment → Source: **GitHub Actions**. After that, every merge to `main` publishes the demo at https://open-processdesign.github.io/simulator/.
+Default: until this is done the `pages` workflow fails at the deploy step; nothing else is affected.
+
 ## Answered
 
 **Q1 · Server for DWSIM.** No server for now; team is Berkay + Claude. → D011, D012 (DWSIM after the demo).

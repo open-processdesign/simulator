@@ -13,7 +13,7 @@ export interface ComponentEntry {
 export const COMPONENTS: ComponentEntry[] = (data as { components: ComponentEntry[] }).components;
 export const COMPONENT_SOURCE: string = (data as { source: string }).source;
 
-const fold = (s: string) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const fold = (s: string) => s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 const INDEX = COMPONENTS.map((entry) => ({
   entry,

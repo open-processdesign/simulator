@@ -3,6 +3,7 @@ import { LANGUAGES, rememberLanguage, type Language } from "@/i18n";
 import { WorkflowNav } from "@/components/WorkflowNav";
 import { EngineStatus } from "@/components/EngineStatus";
 import { RunButton } from "@/results/RunButton";
+import { FileMenu, ProcessName } from "@/components/FileMenu";
 import type { Step } from "@/steps";
 
 interface TopBarProps {
@@ -15,10 +16,12 @@ export function TopBar({ step, onStepChange }: TopBarProps) {
   const { t, i18n } = useTranslation();
 
   return (
-    <header className="flex h-topbar shrink-0 items-center gap-6 border-b border-border bg-surface px-4">
+    <header className="flex h-topbar shrink-0 items-center gap-4 border-b border-border bg-surface px-4">
       <div className="flex items-center gap-2">
         <img src="./favicon.svg" alt="" className="size-5" />
         <span className="text-base font-semibold">{t("app.name")}</span>
+        <FileMenu />
+        <ProcessName />
       </div>
 
       <WorkflowNav current={step} onChange={onStepChange} />

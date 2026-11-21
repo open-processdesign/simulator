@@ -15,6 +15,7 @@ export type FlowsheetAction =
   | { type: "remove_unit"; id: string }
   | { type: "move_unit"; id: string; x: number; y: number }
   | { type: "set_label"; id: string; label: string }
+  | { type: "set_name"; name: string }
   | { type: "set_options"; id: string; options: Record<string, unknown> }
   | { type: "set_spec"; id: string; name: string; quantity: Quantity | null; exclusive?: string[] }
   | { type: "connect"; from: Endpoint; to: Endpoint }
@@ -125,6 +126,8 @@ export function flowsheetReducer(doc: Flowsheet, action: FlowsheetAction): Flows
         const { label: _old, ...rest } = u;
         return action.label.trim() ? { ...rest, label: action.label.trim() } : rest;
       });
+    case "set_name":
+      return action.name.trim() ? { ...doc, name: action.name.trim() } : doc;
     case "set_options":
       return mapUnit(doc, action.id, (u) => ({ ...u, options: { ...u.options, ...action.options } }));
     case "set_spec":

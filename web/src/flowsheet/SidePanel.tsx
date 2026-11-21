@@ -11,7 +11,7 @@ import { useFlowsheet } from "@/state/FlowsheetProvider";
 import { specUnit, unitDef, type SpecGroup } from "./catalog";
 import { issuesForUnit } from "./useIssues";
 
-export type Selection = { kind: "unit" | "stream"; id: string } | null;
+import type { Selection } from "@/state/SelectionProvider";
 
 /** Right-hand panel: settings of the selected unit or stream (no pop-up windows). */
 export function SidePanel({ selection, issues, onDeleted }: {

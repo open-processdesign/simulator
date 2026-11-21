@@ -157,3 +157,9 @@ Template:
 - Tests: engine 161 passed (new `test_shell_and_tube.py`); web 56 passed.
 - PR: agent/T24-shell-and-tube (stacked on T23).
 - Next: T25/T26 literature validation cases.
+
+## 2026-11-21 — Claude (manual session) — T25, T26
+- Done: literature validation cases from Turton's published CHEMCAD stream tables — cumene Unit 800 (E-801, H-801, R-801, E-802 duties within 3 %, flash split within 0.6 %) and DME Unit 200 (adiabatic reactor +2.6 K with PR; methanol–water let-downs within 0.3 K); examples, tests, VALIDATION section with deviations and a known gap (missing DME NRTL pairs); D031.
+- Tests: engine 178 passed (new `test_literature_cases.py`); web 56 passed.
+- PR: agent/T25-literature-cases (stacked on T24).
+- Next: T27 HDA template.

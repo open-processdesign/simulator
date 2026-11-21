@@ -46,6 +46,45 @@ the HDA process against the maintainer's CHEMCAD case, plus two or three literat
 | MTBE, NRTL liquid | Π(x γ)^ν = K_a with γ from the model | K_a | 1e-6 rel. | `test_nrtl_outlet_satisfies_activity_mass_action` |
 | Recycle loops | Analytic R = rF/(1 − r); once-through duties | flows, duties | 1e-6 rel. | `test_recycle.py` |
 
+## Literature cases (published CHEMCAD stream tables)
+
+### Cumene, Unit 800 — Turton (WVU), SRK
+
+Source: R. Turton, *Cumene Production – Change in Reactor Conditions*, Appendix 1 (Table 1 and
+equipment summary), <https://richardturton.faculty.wvu.edu/files/d/3bcf319c-2670-4fae-926f-04045aa5f217/cumene2.pdf>.
+Example `cumene-unit-800-validation`: Stream 6 → E-801 → H-801 → R-801 (conversions from the
+Stream 7 → 8 extents) → E-802 → V-802. Test: `test_literature_cases.py`.
+
+| Quantity | Published | Engine (SRK) | Deviation | ε |
+|---|---|---|---|---|
+| E-801 duty | 12,800 MJ/h | 12,929 MJ/h | +1.0 % | 4 % |
+| H-801 duty | 6,334 MJ/h | 6,494 MJ/h | +2.5 % | 4 % |
+| R-801 heat removal | 9,840 MJ/h | 9,722 MJ/h | −1.2 % | 4 % |
+| E-802 duty | 16,257 MJ/h | 16,737 MJ/h | +3.0 % | 4 % |
+| V-802 vapour (Stream 9) | 19.89 kmol/h | 20.01 kmol/h | +0.6 % | 3 % |
+| Stream 9 propylene / propane / benzene / cumene | 5.97 / 5.27 / 7.88 / 0.77 | 5.99 / 5.27 / 7.93 / 0.82 | ≤ 0.05 kmol/h | 0.1 kmol/h |
+| Stream 10 benzene / cumene / p-DIPB | 101.08 / 93.62 / 2.79 | 101.10 / 93.57 / 2.79 | ≤ 0.1 % | 0.5 % |
+
+### Dimethyl ether, Unit 200 — Turton (WVU)
+
+Source: R. Turton, *Production of Dimethyl Ether*, stream tables (original: NRTL K-values, SRK
+enthalpies), <https://richardturton.faculty.wvu.edu/files/d/7cd9840b-ef1f-4995-9ebe-7d654abf91ea/dimethyl_ether.pdf>.
+Example `dme-unit-200-validation` (NRTL). Test: `test_literature_cases.py`.
+
+| Quantity | Published | Engine | Deviation | ε |
+|---|---|---|---|---|
+| R-101 adiabatic outlet T (80 % conversion) | 365.65 °C | 368.26 °C (PR) | +2.6 K | 3 K |
+| Same with NRTL (ideal-gas vapour enthalpy) | 365.65 °C | 376.0 °C | +10.4 K | not tested — use an EOS for gas-phase reactors |
+| Stream 11 (let-down to 6.91 atm) | 138.82 °C, VF 0.046 | 138.93 °C, VF 0.025 | +0.1 K | 0.3 K, 0.03 |
+| Stream 14 (let-down to 1.09 atm) | 80.93 °C, VF 0.14 | 80.66 °C, VF 0.10 | −0.3 K | 0.5 K, 0.05 |
+| Stream 7 VF (135.19 °C, 14.9 atm) | 0.50 | 0.41 | −0.09 | **known gap** |
+| Stream 8 (let-down to 10.26 atm) | 125.56 °C, VF 0.53 | 121.3 °C, VF 0.44 | −4.2 K | **known gap** |
+
+Known gap: the ChemSep NRTL table shipped with `thermo` has no DME–methanol and DME–water
+pairs, so the engine treats them as ideal (warning `missing_binary_parameter`). Streams 7–8
+contain 39 % DME, so their phase split is off; enter literature NRTL parameters for these pairs
+on the Thermodynamics page to close it.
+
 ## Browser engine
 
 All examples are solved in Pyodide (`web/src/engine/engine.spike.test.ts`) and give the same
@@ -54,5 +93,5 @@ numbers as native CPython (flash-drum S2 x_benzene 0.6211 in both).
 ## Next (M3)
 
 1. **HDA vs. CHEMCAD.** Maintainer: export the CHEMCAD stream table (T, P, flows, compositions) of the HDA design-course case. We rebuild the case as `examples/hda-validated.opd.json` and add a test with ε per quantity.
-2. **Methanol synthesis** and **cumene** from published design cases (literature tables with stream data).
+2. Done: cumene (Unit 800) and DME (Unit 200) from Turton's published CHEMCAD tables (above).
 3. Record agreed ε values here and keep them as test tolerances.

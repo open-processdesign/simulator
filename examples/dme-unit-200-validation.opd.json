@@ -1,0 +1,330 @@
+{
+ "format": "opd-flowsheet",
+ "version": "0.1",
+ "name": "DME Unit 200 (Turton) — validation",
+ "description": "Reactor and let-down section of Turton's dimethyl ether process (WVU design project, published stream table; K-values NRTL). R-101 is adiabatic at 80 % methanol conversion; E-102 cools the effluent; valves let down the column feed and the two column bottoms. Compare outlet temperatures and vapour fractions with Streams 6, 7, 8, 11 and 14 (docs/VALIDATION.md).",
+ "components": [
+  {
+   "id": "methanol",
+   "name": "Methanol",
+   "cas": "67-56-1",
+   "formula": "CH4O"
+  },
+  {
+   "id": "dme",
+   "name": "Dimethyl ether",
+   "cas": "115-10-6",
+   "formula": "C2H6O"
+  },
+  {
+   "id": "water",
+   "name": "Water",
+   "cas": "7732-18-5",
+   "formula": "H2O"
+  }
+ ],
+ "thermo": {
+  "package": "NRTL"
+ },
+ "units": [
+  {
+   "id": "F5",
+   "type": "feed",
+   "label": "Reactor feed (Stream 5)"
+  },
+  {
+   "id": "R-101",
+   "type": "conversion_reactor",
+   "label": "DME reactor (adiabatic)",
+   "specs": {
+    "duty": {
+     "value": 0.0,
+     "unit": "W"
+    },
+    "pressure": {
+     "value": 1509742.5,
+     "unit": "Pa"
+    }
+   },
+   "options": {
+    "reactions": [
+     {
+      "stoichiometry": {
+       "methanol": -2,
+       "dme": 1,
+       "water": 1
+      },
+      "key": "methanol",
+      "conversion": 0.8
+     }
+    ]
+   }
+  },
+  {
+   "id": "E-102",
+   "type": "heater",
+   "label": "Reactor effluent cooler",
+   "specs": {
+    "temperature": {
+     "value": 408.34,
+     "unit": "K"
+    },
+    "pressure": {
+     "value": 1509742.5,
+     "unit": "Pa"
+    }
+   }
+  },
+  {
+   "id": "V-1",
+   "type": "valve",
+   "label": "T-101 feed valve",
+   "specs": {
+    "pressure": {
+     "value": 1039594.5,
+     "unit": "Pa"
+    }
+   }
+  },
+  {
+   "id": "P8",
+   "type": "product",
+   "label": "T-101 feed (Stream 8)"
+  },
+  {
+   "id": "F10",
+   "type": "feed",
+   "label": "T-101 bottoms (Stream 10)"
+  },
+  {
+   "id": "V-2",
+   "type": "valve",
+   "label": "Let-down to T-102 drum",
+   "specs": {
+    "pressure": {
+     "value": 700155.75,
+     "unit": "Pa"
+    }
+   }
+  },
+  {
+   "id": "P11",
+   "type": "product",
+   "label": "Stream 11"
+  },
+  {
+   "id": "F13",
+   "type": "feed",
+   "label": "Drum liquid (Stream 13)"
+  },
+  {
+   "id": "V-3",
+   "type": "valve",
+   "label": "T-102 feed valve",
+   "specs": {
+    "pressure": {
+     "value": 110444.25000000001,
+     "unit": "Pa"
+    }
+   }
+  },
+  {
+   "id": "P14",
+   "type": "product",
+   "label": "T-102 feed (Stream 14)"
+  }
+ ],
+ "streams": [
+  {
+   "id": "S5",
+   "from": {
+    "unit": "F5",
+    "port": "out"
+   },
+   "to": {
+    "unit": "R-101",
+    "port": "in"
+   },
+   "state": {
+    "temperature": {
+     "value": 523.15,
+     "unit": "K"
+    },
+    "pressure": {
+     "value": 1518861.75,
+     "unit": "Pa"
+    },
+    "molar_flow": {
+     "value": 93.02777777777777,
+     "unit": "mol/s"
+    },
+    "mole_fractions": {
+     "methanol": 0.9830098536876679,
+     "dme": 0.0008062108091967753,
+     "water": 0.016183935503135266
+    }
+   }
+  },
+  {
+   "id": "S6",
+   "from": {
+    "unit": "R-101",
+    "port": "out"
+   },
+   "to": {
+    "unit": "E-102",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S7",
+   "from": {
+    "unit": "E-102",
+    "port": "out"
+   },
+   "to": {
+    "unit": "V-1",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S8",
+   "from": {
+    "unit": "V-1",
+    "port": "out"
+   },
+   "to": {
+    "unit": "P8",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S10",
+   "from": {
+    "unit": "F10",
+    "port": "out"
+   },
+   "to": {
+    "unit": "V-2",
+    "port": "in"
+   },
+   "state": {
+    "temperature": {
+     "value": 427.13,
+     "unit": "K"
+    },
+    "pressure": {
+     "value": 1039594.5,
+     "unit": "Pa"
+    },
+    "molar_flow": {
+     "value": 56.425000000000004,
+     "unit": "mol/s"
+    },
+    "mole_fractions": {
+     "methanol": 0.3238812583074878,
+     "dme": 0.001279968493083247,
+     "water": 0.6748387731994289
+    }
+   }
+  },
+  {
+   "id": "S11",
+   "from": {
+    "unit": "V-2",
+    "port": "out"
+   },
+   "to": {
+    "unit": "P11",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S13",
+   "from": {
+    "unit": "F13",
+    "port": "out"
+   },
+   "to": {
+    "unit": "V-3",
+    "port": "in"
+   },
+   "state": {
+    "temperature": {
+     "value": 412.12,
+     "unit": "K"
+    },
+    "pressure": {
+     "value": 700155.75,
+     "unit": "Pa"
+    },
+    "molar_flow": {
+     "value": 56.169444444444444,
+     "unit": "mol/s"
+    },
+    "mole_fractions": {
+     "methanol": 0.3220908956035804,
+     "dme": 0.0,
+     "water": 0.6779091043964196
+    }
+   }
+  },
+  {
+   "id": "S14",
+   "from": {
+    "unit": "V-3",
+    "port": "out"
+   },
+   "to": {
+    "unit": "P14",
+    "port": "in"
+   }
+  }
+ ],
+ "layout": {
+  "F5": {
+   "x": 0,
+   "y": 20
+  },
+  "R-101": {
+   "x": 180,
+   "y": 0
+  },
+  "E-102": {
+   "x": 360,
+   "y": 0
+  },
+  "V-1": {
+   "x": 540,
+   "y": 0
+  },
+  "P8": {
+   "x": 720,
+   "y": 20
+  },
+  "F10": {
+   "x": 0,
+   "y": 180
+  },
+  "V-2": {
+   "x": 180,
+   "y": 180
+  },
+  "P11": {
+   "x": 360,
+   "y": 200
+  },
+  "F13": {
+   "x": 0,
+   "y": 320
+  },
+  "V-3": {
+   "x": 180,
+   "y": 320
+  },
+  "P14": {
+   "x": 360,
+   "y": 340
+  }
+ }
+}

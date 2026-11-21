@@ -142,27 +142,15 @@ class _Thermo:
             self.flasher = FlashVL(self.constants, self.props, liquid=liquid, gas=gas)
 
     def _kijs(self, fs: Flowsheet, n: int) -> list[list[float]]:
-        """k_ij: user/literature values first, then the database, else 0 with a warning."""
+        """k_ij matrix from `binary_parameter_table`; missing pairs get 0 and a warning."""
         index = {cid: k for k, cid in enumerate(self.ids)}
         kij = [[0.0] * n for _ in range(n)]
-        given: set[frozenset[int]] = set()
-        for p in fs.thermo.binary_parameters:
-            if p.name.lower() != "kij" or p.i not in index or p.j not in index:
-                continue
-            i, j = index[p.i], index[p.j]
-            kij[i][j] = kij[j][i] = p.value
-            given.add(frozenset((i, j)))
-        table = _KIJ_TABLE.get(self.package)
-        for i in range(n):
-            for j in range(i + 1, n):
-                if frozenset((i, j)) in given:
-                    continue
-                pair = [self.cas[i], self.cas[j]]
-                if table and IPDB.has_ip_specific(table, pair, "kij"):
-                    kij[i][j] = kij[j][i] = float(IPDB.get_ip_specific(table, pair, "kij"))
-                else:
-                    self.issues.append(_issue(Severity.WARNING, "missing_binary_parameter",
-                                              "thermo", None, i=self.ids[i], j=self.ids[j]))
+        for row in binary_parameter_table(fs):
+            i, j = index[row["i"]], index[row["j"]]
+            kij[i][j] = kij[j][i] = row["value"]
+            if row["source"] == "missing":
+                self.issues.append(_issue(Severity.WARNING, "missing_binary_parameter",
+                                          "thermo", None, i=row["i"], j=row["j"]))
         return kij
 
     def flash_raw(self, zs: list[float], **spec: float) -> Any:
@@ -185,6 +173,41 @@ class _Thermo:
         vap_state = _State(T, P, vf, list(gas.zs), gas.H(), 1.0) if gas is not None else None
         liq_state = _State(T, P, 1 - vf, list(liq.zs), liq.H(), 0.0) if liq is not None else None
         return vap_state, liq_state
+
+
+def database_kij(package: str, cas_i: str, cas_j: str) -> float | None:
+    """k_ij for a pair from the tables shipped with `thermo`, or None if there is none."""
+    table = _KIJ_TABLE.get(package)
+    pair = [cas_i, cas_j]
+    if table and IPDB.has_ip_specific(table, pair, "kij"):
+        return float(IPDB.get_ip_specific(table, pair, "kij"))
+    return None
+
+
+def binary_parameter_table(fs: Flowsheet) -> list[dict[str, Any]]:
+    """One row per component pair with the k_ij the engine will use and where it comes from.
+
+    Order of precedence: a value in the document (its own `source`: user, literature, …),
+    then the database, else 0 with source "missing". Empty for IDEAL (no k_ij in Raoult's law).
+    """
+    if fs.thermo.package not in ("PR", "SRK"):
+        return []
+    given = {}
+    for p in fs.thermo.binary_parameters:
+        if p.name.lower() == "kij":
+            given[frozenset((p.i, p.j))] = (p.value, p.source)
+    comps = fs.components
+    rows = []
+    for a in range(len(comps)):
+        for b in range(a + 1, len(comps)):
+            ci, cj = comps[a], comps[b]
+            if frozenset((ci.id, cj.id)) in given:
+                value, source = given[frozenset((ci.id, cj.id))]
+            else:
+                db = database_kij(fs.thermo.package, ci.cas, cj.cas)
+                value, source = (db, "database") if db is not None else (0.0, "missing")
+            rows.append({"i": ci.id, "j": cj.id, "name": "kij", "value": value, "source": source})
+    return rows
 
 
 def _vapor_fraction(res: Any) -> float:

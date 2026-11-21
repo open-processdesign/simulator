@@ -32,8 +32,18 @@ export interface BootOptions {
   warmup?: unknown;
 }
 
+export interface BinaryParameterRow {
+  i: string;
+  j: string;
+  name: "kij";
+  value: number;
+  source: "database" | "missing" | "user" | "literature" | "regression" | "default";
+}
+
 export interface Engine {
   simulate(doc: unknown): EngineResult;
+  /** k_ij per component pair and its source (reads only `components` and `thermo`). */
+  binaryParameters(doc: unknown): BinaryParameterRow[];
   timings: Timing[];
   version: string;
 }
@@ -79,14 +89,17 @@ export async function bootEngine(pyodide: PyodideAPI, options: BootOptions): Pro
       pyodide.FS.writeFile(full, text);
     }
   });
-  const simulateJson = await step("import engine", () => {
+  const api = await step("import engine", () => {
     pyodide.runPython(`import sys\nif "/home/pyodide" not in sys.path: sys.path.insert(0, "/home/pyodide")`);
     const runtime = pyodide.pyimport("opd_engine.runtime");
     pyodide.runPython("import opd_engine.adapters.reference");
-    return runtime.simulate_json as (doc: string) => string;
+    return {
+      simulate: runtime.simulate_json as (doc: string) => string,
+      binaryParameters: runtime.binary_parameters_json as (doc: string) => string,
+    };
   });
   if (options.warmup !== undefined) {
-    await step("warm-up solve", () => simulateJson(JSON.stringify(options.warmup)));
+    await step("warm-up solve", () => api.simulate(JSON.stringify(options.warmup)));
   }
   const version = pyodide.runPython(
     "import opd_engine.adapter as a; a.get('reference').version()",
@@ -96,7 +109,10 @@ export async function bootEngine(pyodide: PyodideAPI, options: BootOptions): Pro
     timings,
     version,
     simulate(doc: unknown): EngineResult {
-      return JSON.parse(simulateJson(JSON.stringify(doc))) as EngineResult;
+      return JSON.parse(api.simulate(JSON.stringify(doc))) as EngineResult;
+    },
+    binaryParameters(doc: unknown): BinaryParameterRow[] {
+      return JSON.parse(api.binaryParameters(JSON.stringify(doc))) as BinaryParameterRow[];
     },
   };
 }

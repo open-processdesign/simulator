@@ -43,3 +43,22 @@ def simulate(doc: dict[str, Any], engine: str = "reference") -> dict[str, Any]:
 def simulate_json(doc_json: str, engine: str = "reference") -> str:
     """Same as `simulate`, with JSON strings at the boundary (cheap to pass to JS)."""
     return json.dumps(simulate(json.loads(doc_json), engine))
+
+
+def binary_parameters(doc: dict[str, Any]) -> list[dict[str, Any]]:
+    """k_ij per component pair and its source, as the reference engine would use them.
+
+    Only `components` and `thermo` of the document are read, so it works on drafts.
+    """
+    from .adapters.reference import binary_parameter_table
+    from .models import load
+
+    draft = {"format": "opd-flowsheet", "version": "0.1", "name": doc.get("name") or "draft",
+             "components": doc.get("components", []), "thermo": doc.get("thermo", {"package": "PR"}),
+             "units": [], "streams": []}
+    return binary_parameter_table(load(draft))
+
+
+def binary_parameters_json(doc_json: str) -> str:
+    return json.dumps(binary_parameters(json.loads(doc_json)))
+

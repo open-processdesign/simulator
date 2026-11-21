@@ -38,3 +38,10 @@ Template:
 - Tests: 46 passed. Checks: flash-drum balances; IDEAL flash vs. Raoult + Antoine (Felder & Rousseau, Table B.4) hand calculation; PR/SRK pure-component boiling points vs. NIST WebBook; heater T ⇄ duty round trip; isenthalpic valve; mixer/splitter balances; adiabatic flash; user k_ij; issue codes all translated; result document valid against the JSON Schema.
 - PR: #4 (based on PR #2).
 - Next: T03 (Pyodide spike: run this adapter in the browser).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T03
+- Done: `opd_engine/runtime.py` (JSON in/out entry point shared by browser and future service). `web/src/engine/`: Pyodide bootstrap, Web Worker, promise client; `engine-test.html` developer page (progress, load timings, stream table, EN/TR). Build-time overrides for self-hosting (`VITE_PYODIDE_URL`, `VITE_WHEELS`). Node measurement test (`npm run spike:engine`, opt-in). Branch also merges T01 (the page needs the web app).
+- Tests: engine 48 passed; web 5 passed + spike passed under Node; end-to-end in headless Chrome: ready in 12.6 s, example solved in 27 ms, same numbers as native.
+- Result: D014 — browser engine is viable (≈ 13 s boot + ≈ 67 MB first download).
+- PR: #5 (based on PR #4).
+- Next: T05 (Components + Thermodynamics pages) or T06 (canvas).

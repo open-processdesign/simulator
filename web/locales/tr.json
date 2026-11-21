@@ -12,6 +12,7 @@
     "run": { "title": "Çalıştır", "empty": "Girdileri kontrol edin ve simülasyonu çalıştırın." },
     "results": { "title": "Sonuçlar", "empty": "Çalıştırmadan sonra akım tabloları ve ünite sonuçları burada görünür." }
   },
+  "engine_test": {"title": "Motor testi", "intro": "Python motorunu tarayıcınızda yükler ve flaş tankı örneğini çözer. İlk ziyarette yaklaşık 70 MB indirilir; sonraki ziyaretlerde tarayıcı önbelleği kullanılır.", "run": "Örneği çöz", "loading": "Yükleniyor: {{step}}", "ready": "Motor hazır", "failed": "Motor yüklenemedi: {{error}}", "step": "Adım", "time": "Süre", "stream": "Akım", "solve_time": "{{ms}} ms'de çözüldü"},
   "steps": {
     "components": "Bileşenler",
     "thermo": "Termodinamik",

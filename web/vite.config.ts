@@ -16,10 +16,22 @@ export default defineConfig({
     },
   },
   server: { fs: { allow: [".."] } },
+  // Pyodide ships its own loader; let it load its files at run time instead of pre-bundling.
+  optimizeDeps: { exclude: ["pyodide"] },
+  worker: { format: "es" },
+  build: {
+    rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL("./index.html", import.meta.url)),
+        "engine-test": fileURLToPath(new URL("./engine-test.html", import.meta.url)),
+      },
+    },
+  },
   test: {
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     css: false,
+    exclude: ["**/node_modules/**", "**/dist/**", ...(process.env.PYODIDE_DIST ? [] : ["**/*.spike.test.ts"])],
   },
 });

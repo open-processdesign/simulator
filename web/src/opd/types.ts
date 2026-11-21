@@ -86,8 +86,10 @@ const ID_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
 export function makeId(name: string, taken: Iterable<string>): string {
   const used = new Set(taken);
   let base = name
+    .replace(/ı/g, "i")
+    .replace(/İ/g, "I")
     .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^A-Za-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
     .slice(0, 56);

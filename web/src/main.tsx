@@ -11,7 +11,7 @@ import { SelectionProvider } from "./state/SelectionProvider";
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <EngineProvider>
-      <FlowsheetProvider>
+      <FlowsheetProvider persist>
         <RunProvider>
           <SelectionProvider>
             <App />

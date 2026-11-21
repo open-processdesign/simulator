@@ -6,8 +6,9 @@ own modules. All property and phase-equilibrium numbers come from `thermo`
 (Caleb Bell et al., https://github.com/CalebBell/thermo, MIT); this module only does
 bookkeeping: port conventions, material and energy balances, and the solve order.
 
-Scope (T04): acyclic flowsheets; units feed, product, mixer, splitter, heater, valve,
-flash; property packages IDEAL (Raoult), PR and SRK. Recycle loops come in T08.
+Scope: units feed, product, mixer, splitter, heater, valve, flash; property packages
+IDEAL (Raoult), PR and SRK; recycle loops through tear streams converged with bounded
+Wegstein or successive substitution (see `recycle.py`, T08).
 
 Port and spec conventions (all values SI, see DECISIONS.md D007 and D013):
 
@@ -17,8 +18,8 @@ unit       ports                  specs
 feed       out                    on the outgoing stream ``state``: pressure, molar_flow,
                                   mole_fractions, and temperature *or* vapor_fraction
 product    in                     –
-mixer      in*, out               optional pressure (default: lowest inlet pressure);
-                                  adiabatic
+mixer      in*, out               optional pressure (default: lowest pressure of the
+                                  inlets that carry flow); adiabatic
 splitter   in, any outlets        ``split_<port>`` (fraction, unit "1") for every outlet
                                   but one; the remaining outlet takes the rest
 heater     in, out                exactly one of temperature, duty, vapor_fraction;
@@ -57,6 +58,7 @@ from thermo.interaction_parameters import IPDB
 from .. import adapter as _adapter
 from ..adapter import Capabilities, Issue, OPDDocument, Severity, SimulationResult, Target
 from ..models import Flowsheet, Stream, Unit, check_references, load
+from .recycle import Accelerator, Block, Edge, solve_plan
 
 UNIT_TYPES = frozenset({"feed", "product", "mixer", "splitter", "heater", "valve", "flash"})
 THERMO_PACKAGES = frozenset({"IDEAL", "PR", "SRK"})
@@ -226,16 +228,24 @@ def _empty(T: float, P: float) -> _State:
 
 
 class ReferenceAdapter:
-    """Sequential-modular solver for acyclic flowsheets on top of `thermo`."""
+    """Sequential-modular solver on top of `thermo`, with recycle loops (tear streams)."""
 
     name = "reference"
+
+    def __init__(self, recycle_method: str = "wegstein", max_iterations: int = 200,
+                 tolerance: float = 1e-8) -> None:
+        if recycle_method not in ("wegstein", "direct"):
+            raise ValueError("recycle_method must be 'wegstein' or 'direct'")
+        self.recycle_method = recycle_method
+        self.max_iterations = max_iterations
+        self.tolerance = tolerance  # relative, on tear-stream component flows and pressure
 
     def version(self) -> str:
         return f"opd-reference 0.1 (thermo {thermo.__version__})"
 
     def capabilities(self) -> Capabilities:
         return Capabilities(unit_types=UNIT_TYPES, thermo_packages=THERMO_PACKAGES,
-                            supports_recycle=False)
+                            supports_recycle=True)
 
     # ------------------------------------------------------------------ validation
 
@@ -275,11 +285,6 @@ class ReferenceAdapter:
             src = fs.unit(s.from_.unit)
             if src is not None and src.type == "feed":
                 issues += _check_feed_stream(s)
-        if not any(i.severity is Severity.ERROR for i in issues):
-            order, cyclic = _topological_order(fs)
-            for uid in cyclic:
-                issues.append(_error("recycle_not_supported", "unit", uid, target=uid,
-                                     engine=self.name))
         return issues
 
     # ------------------------------------------------------------------ simulation
@@ -297,27 +302,37 @@ class ReferenceAdapter:
         issues += th.issues
 
         ins, outs = _connections(fs)
-        order, _ = _topological_order(fs)
+        edges = [Edge(st.id, st.from_.unit, st.to.unit) for st in fs.streams]
+        blocks = solve_plan([u.id for u in fs.units], edges)
         states: dict[str, _State] = {}
         unit_results: dict[str, dict[str, dict[str, Any]]] = {}
 
-        for uid in order:
+        def solve_unit(uid: str) -> Issue | None:
             u = fs.unit(uid)
             assert u is not None
             inlets = {port: states[sid] for port, sid in ins.get(uid, {}).items()}
             try:
                 outlets, results = _SOLVERS[u.type](u, inlets, outs.get(uid, {}), th, fs)
             except _InputError as exc:
-                issues.append(exc.issue)
-                return self._result(doc, False, issues)
+                return exc.issue
             except Exception as exc:  # thermo did not converge or rejected the input
-                issues.append(_error("calculation_failed", "unit", u.id, target=u.id,
-                                     detail=f"{type(exc).__name__}: {exc}"))
-                return self._result(doc, False, issues)
+                return _error("calculation_failed", "unit", u.id, target=u.id,
+                              detail=f"{type(exc).__name__}: {exc}")
             for port, state in outlets.items():
                 states[outs[uid][port]] = state
+            unit_results.pop(uid, None)
             if results:
                 unit_results[uid] = results
+            return None
+
+        for block in blocks:
+            if not block.is_loop:
+                problem = solve_unit(block.units[0])
+            else:
+                problem = self._converge(block, fs, th, states, solve_unit, issues)
+            if problem is not None:
+                issues.append(problem)
+                return self._result(doc, False, issues)
 
         out = copy.deepcopy(doc)
         out["results"] = {
@@ -329,6 +344,40 @@ class ReferenceAdapter:
             "units": unit_results,
         }
         return SimulationResult(True, out, issues, self.name, self.version())
+
+    def _converge(self, block: Block, fs: Flowsheet, th: "_Thermo", states: dict[str, _State],
+                  solve_unit: Callable[[str], Issue | None], issues: list[Issue]) -> Issue | None:
+        """Iterate a recycle loop until its tear streams stop changing (see recycle.py)."""
+        n = len(th.ids)
+        for sid in block.tears:
+            states[sid] = _initial_guess(fs.stream(sid), th)
+        acc = Accelerator(method=self.recycle_method)
+        residual = math.inf
+        for _ in range(self.max_iterations):
+            x = {sid: states[sid] for sid in block.tears}
+            for uid in block.units:
+                problem = solve_unit(uid)
+                if problem is not None:
+                    return problem
+            g = {sid: states[sid] for sid in block.tears}
+            residual = max(_residual(x[sid], g[sid], n) for sid in block.tears)
+            if residual <= self.tolerance:
+                # The last pass started from x ≈ g, so every stream in the loop is consistent.
+                issues.append(_issue(Severity.INFO, "recycle_converged", "stream", block.tears[0],
+                                     streams=block.tears, iterations=acc.iterations + 1,
+                                     method=self.recycle_method))
+                return None
+            xv = [v for sid in block.tears for v in _to_vector(x[sid], n)]
+            gv = [v for sid in block.tears for v in _to_vector(g[sid], n)]
+            new = acc.next(xv, gv)
+            if new == gv:
+                continue  # plain substitution: computed states are reused as they are
+            width = n + 2
+            for k, sid in enumerate(block.tears):
+                states[sid] = _from_vector(new[k * width:(k + 1) * width], g[sid], th)
+        return _error("recycle_not_converged", "stream", block.tears[0], target=block.tears[0],
+                      streams=block.tears, iterations=self.max_iterations,
+                      residual=float(f"{residual:.3g}"))
 
     def _result(self, doc: OPDDocument, converged: bool, issues: list[Issue]) -> SimulationResult:
         return SimulationResult(converged, doc, issues, self.name, self.version())
@@ -362,25 +411,48 @@ def _connections(fs: Flowsheet) -> tuple[dict[str, dict[str, str]], dict[str, di
     return ins, outs
 
 
-def _topological_order(fs: Flowsheet) -> tuple[list[str], list[str]]:
-    """Kahn's algorithm. Returns (order, units on or after a cycle)."""
-    indeg = {u.id: 0 for u in fs.units}
-    succ: dict[str, list[str]] = {u.id: [] for u in fs.units}
-    for s in fs.streams:
-        if s.from_.unit in indeg and s.to.unit in indeg:
-            succ[s.from_.unit].append(s.to.unit)
-            indeg[s.to.unit] += 1
-    ready = [u.id for u in fs.units if indeg[u.id] == 0]
-    order: list[str] = []
-    while ready:
-        uid = ready.pop(0)
-        order.append(uid)
-        for nxt in succ[uid]:
-            indeg[nxt] -= 1
-            if indeg[nxt] == 0:
-                ready.append(nxt)
-    cyclic = [u.id for u in fs.units if u.id not in order]
-    return order, cyclic
+def _initial_guess(stream: Stream | None, th: "_Thermo") -> _State:
+    """Tear-stream start value: the stream's own state if fully given, else empty."""
+    st = stream.state if stream is not None else None
+    if st and st.temperature and st.pressure and st.molar_flow and st.mole_fractions:
+        zs = [float(st.mole_fractions.get(cid, 0.0)) for cid in th.ids]
+        total = sum(zs)
+        if total > 0 and st.molar_flow.value > 0:
+            zs = [z / total for z in zs]
+            return _scaled(th.flash(zs, T=st.temperature.value, P=st.pressure.value),
+                           st.molar_flow.value)
+    P = st.pressure.value if st and st.pressure else 101325.0
+    T = st.temperature.value if st and st.temperature else 298.15
+    return _empty(T, P)
+
+
+def _to_vector(st: _State, n: int) -> list[float]:
+    """Tear variables: component flows (mol/s), enthalpy flow (W), pressure (Pa)."""
+    if st.F <= _ZERO_FLOW or st.zs is None:
+        return [0.0] * n + [0.0, st.P]
+    return [st.F * z for z in st.zs] + [st.F * st.H, st.P]  # type: ignore[operator]
+
+
+def _from_vector(v: list[float], like: _State, th: "_Thermo") -> _State:
+    n = len(th.ids)
+    flows = [max(0.0, f) for f in v[:n]]
+    F, Hdot, P = sum(flows), v[n], v[n + 1]
+    if F <= _ZERO_FLOW:
+        return _empty(like.T, P)
+    zs = [f / F for f in flows]
+    return _scaled(th.flash(zs, P=P, H=Hdot / F), F)
+
+
+def _residual(x: _State, g: _State, n: int) -> float:
+    """Largest relative change of a tear stream: component flows, then pressure."""
+    xv, gv = _to_vector(x, n), _to_vector(g, n)
+    scale = max(sum(gv[:n]), sum(xv[:n]), _ZERO_FLOW)
+    flows = max((abs(a - b) / scale for a, b in zip(xv[:n], gv[:n])), default=0.0)
+    pressure = abs(xv[n + 1] - gv[n + 1]) / max(abs(gv[n + 1]), 1.0)
+    temperature = 0.0
+    if x.F > _ZERO_FLOW and g.F > _ZERO_FLOW:
+        temperature = abs(x.T - g.T) / max(g.T, 1.0)
+    return max(flows, pressure, temperature)
 
 
 def _check_si(fs: Flowsheet) -> list[Issue]:
@@ -538,9 +610,11 @@ def _solve_product(u, inlets, outs, th, fs):
 
 def _solve_mixer(u, inlets, outs, th, fs):
     streams = [s for s in inlets.values()]
-    P = u.specs["pressure"].value if "pressure" in u.specs else min(s.P for s in streams)
-    _require_positive_pressure(u, P)
     flowing = [s for s in streams if s.F > _ZERO_FLOW]
+    # An empty inlet has no physical pressure, so it does not set the mixer pressure.
+    P = (u.specs["pressure"].value if "pressure" in u.specs
+         else min(s.P for s in (flowing or streams)))
+    _require_positive_pressure(u, P)
     if not flowing:
         return {"out": _empty(min(s.T for s in streams), P)}, {}
     F = sum(s.F for s in flowing)

@@ -76,6 +76,8 @@
     "out_of_range": "{{target}}: {{spec}} is outside the allowed range.",
     "recycle_not_supported": "{{target}}: is part of a recycle loop; recycle loops are not supported by the {{engine}} engine yet.",
     "calculation_failed": "{{target}}: the calculation did not converge ({{detail}}).",
-    "unknown_component_data": "No property data found for a component ({{detail}})."
+    "unknown_component_data": "No property data found for a component ({{detail}}).",
+    "recycle_converged": "Recycle loop converged in {{iterations}} iterations (tear streams {{streams}}, {{method}}).",
+    "recycle_not_converged": "{{target}}: the recycle loop did not converge in {{iterations}} iterations (largest change {{residual}}). Check the recycle settings or give the tear stream {{streams}} a starting estimate."
   }
 }

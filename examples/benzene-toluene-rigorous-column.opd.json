@@ -1,0 +1,193 @@
+{
+  "format": "opd-flowsheet",
+  "version": "0.1",
+  "name": "Benzene–toluene rigorous column",
+  "description": "Same feed as the shortcut example, solved stage by stage (MESH, bubble-point method): 21 stages incl. total condenser and reboiler, feed on stage 11, reflux ratio 2.5.",
+  "components": [
+    {
+      "id": "benzene",
+      "name": "benzene",
+      "cas": "71-43-2",
+      "formula": "C6H6"
+    },
+    {
+      "id": "toluene",
+      "name": "toluene",
+      "cas": "108-88-3",
+      "formula": "C7H8"
+    }
+  ],
+  "thermo": {
+    "package": "PR"
+  },
+  "units": [
+    {
+      "id": "FEED-1",
+      "type": "feed",
+      "label": "Feed tank"
+    },
+    {
+      "id": "P-1",
+      "type": "pump",
+      "specs": {
+        "pressure": {
+          "value": 150000,
+          "unit": "Pa"
+        },
+        "efficiency": {
+          "value": 0.7,
+          "unit": "1"
+        }
+      }
+    },
+    {
+      "id": "H-1",
+      "type": "heater",
+      "label": "Preheater",
+      "specs": {
+        "vapor_fraction": {
+          "value": 0.0,
+          "unit": "1"
+        }
+      }
+    },
+    {
+      "id": "T-1",
+      "type": "distillation_column",
+      "label": "Benzene column (rigorous)",
+      "specs": {
+        "number_of_stages": {
+          "value": 21,
+          "unit": "1"
+        },
+        "feed_stage": {
+          "value": 11,
+          "unit": "1"
+        },
+        "reflux_ratio": {
+          "value": 2.5,
+          "unit": "1"
+        },
+        "distillate_rate": {
+          "value": 40.0,
+          "unit": "mol/s"
+        },
+        "pressure": {
+          "value": 150000,
+          "unit": "Pa"
+        }
+      }
+    },
+    {
+      "id": "PROD-1",
+      "type": "product",
+      "label": "Benzene"
+    },
+    {
+      "id": "PROD-2",
+      "type": "product",
+      "label": "Toluene"
+    }
+  ],
+  "streams": [
+    {
+      "id": "S1",
+      "from": {
+        "unit": "FEED-1",
+        "port": "out"
+      },
+      "to": {
+        "unit": "P-1",
+        "port": "in"
+      },
+      "state": {
+        "temperature": {
+          "value": 300.0,
+          "unit": "K"
+        },
+        "pressure": {
+          "value": 101325,
+          "unit": "Pa"
+        },
+        "molar_flow": {
+          "value": 100.0,
+          "unit": "mol/s"
+        },
+        "mole_fractions": {
+          "benzene": 0.4,
+          "toluene": 0.6
+        }
+      }
+    },
+    {
+      "id": "S2",
+      "from": {
+        "unit": "P-1",
+        "port": "out"
+      },
+      "to": {
+        "unit": "H-1",
+        "port": "in"
+      }
+    },
+    {
+      "id": "S3",
+      "from": {
+        "unit": "H-1",
+        "port": "out"
+      },
+      "to": {
+        "unit": "T-1",
+        "port": "in"
+      }
+    },
+    {
+      "id": "S4",
+      "from": {
+        "unit": "T-1",
+        "port": "distillate"
+      },
+      "to": {
+        "unit": "PROD-1",
+        "port": "in"
+      }
+    },
+    {
+      "id": "S5",
+      "from": {
+        "unit": "T-1",
+        "port": "bottoms"
+      },
+      "to": {
+        "unit": "PROD-2",
+        "port": "in"
+      }
+    }
+  ],
+  "layout": {
+    "FEED-1": {
+      "x": 0,
+      "y": 120
+    },
+    "P-1": {
+      "x": 170,
+      "y": 120
+    },
+    "H-1": {
+      "x": 340,
+      "y": 120
+    },
+    "T-1": {
+      "x": 520,
+      "y": 120
+    },
+    "PROD-1": {
+      "x": 720,
+      "y": 20
+    },
+    "PROD-2": {
+      "x": 720,
+      "y": 230
+    }
+  }
+}

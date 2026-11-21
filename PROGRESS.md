@@ -103,3 +103,8 @@ Template:
 - Done: "Export CSV" on the Results step: stream table + unit results in the current unit set, UTF-8 BOM, `,`/`.` in English and `;`/`,` in Turkish (Excel defaults), file `<process>-results.csv`; hidden when results are stale.
 - Tests: web 50 passed (metric values, Turkish separators, quoting).
 - PR: #15 (based on PR #14).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T15
+- Done: `engine/opd_engine/adapters/column.py` (bubble-point method + θ-method), `distillation_column` unit in engine, schema, models and UI (palette, spec groups, unit-set kinds, EN/TR), example `benzene-toluene-rigorous-column.opd.json`.
+- Tests: engine 94 passed — MESH residuals on every stage (component balances, y = Kx with K recomputed, summations, enthalpy balances) and overall balances; rigorous column reproduces the FUG design within a few percent (recovery, x_D, condenser duty); more reflux → purer distillate; NRTL methanol–water column; input errors. Web 50 passed; all examples solve in Pyodide (rigorous column 0.6 s).
+- PR: #16 (based on PR #15).

@@ -43,6 +43,10 @@ shortcut_  in, distillate,        options.light_key, options.heavy_key; specs
 column     bottoms                lk_recovery (to distillate), hk_recovery (to bottoms),
                                   reflux_ratio_factor (R/Rmin); optional pressure;
                                   total condenser
+distill-   in, distillate,        number_of_stages (incl. condenser and reboiler),
+ation_     bottoms                feed_stage (counted from the top), reflux_ratio,
+column                            distillate_rate; optional pressure; total condenser,
+                                  partial reboiler; rigorous MESH (column.py, T15)
 =========  =====================  ==========================================================
 
 Duty is heat added to the process stream (W): positive for heating, negative for cooling.
@@ -75,11 +79,12 @@ from thermo.interaction_parameters import IPDB
 from .. import adapter as _adapter
 from ..adapter import Capabilities, Issue, OPDDocument, Severity, SimulationResult, Target
 from ..models import Flowsheet, Stream, Unit, check_references, load
+from .column import ColumnError, solve_column
 from .recycle import Accelerator, Block, Edge, solve_plan
 
 UNIT_TYPES = frozenset({"feed", "product", "mixer", "splitter", "heater", "valve", "flash",
                         "pump", "compressor", "heat_exchanger", "conversion_reactor",
-                        "shortcut_column"})
+                        "shortcut_column", "distillation_column"})
 THERMO_PACKAGES = frozenset({"IDEAL", "PR", "SRK", "NRTL"})
 
 # SI unit strings accepted per spec name (v0.1 stores SI only).
@@ -99,6 +104,10 @@ _SI = {
     "lk_recovery": {"1", "-", ""},
     "hk_recovery": {"1", "-", ""},
     "reflux_ratio_factor": {"1", "-", ""},
+    "number_of_stages": {"1", "-", ""},
+    "feed_stage": {"1", "-", ""},
+    "reflux_ratio": {"1", "-", ""},
+    "distillate_rate": {"mol/s"},
 }
 _FRACTION_UNITS = {"1", "-", ""}
 
@@ -738,6 +747,28 @@ def _check_unit(u: Unit, ins: dict[str, str], outs: dict[str, str],
                                      components=[key]))
         if lk and hk and lk == hk:
             issues.append(_error("same_keys", "unit", u.id, target=u.id))
+    elif t == "distillation_column":
+        need("in", ins)
+        for p in ("distillate", "bottoms"):
+            need(p, outs)
+        no_extra({"in"}, ins)
+        no_extra({"distillate", "bottoms"}, outs)
+        for name in ("number_of_stages", "feed_stage", "reflux_ratio", "distillate_rate"):
+            if name not in u.specs:
+                issues.append(_missing("unit", u.id, name))
+        n = u.specs["number_of_stages"].value if "number_of_stages" in u.specs else None
+        if n is not None and (n != int(n) or n < 3):
+            issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec="number_of_stages",
+                                 min=3, max=None))
+        if "feed_stage" in u.specs:
+            fs_ = u.specs["feed_stage"].value
+            if fs_ != int(fs_) or fs_ < 2 or (n is not None and fs_ > n - 1):
+                issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec="feed_stage",
+                                     min=2, max=(int(n) - 1) if n else None))
+        for name in ("reflux_ratio", "distillate_rate"):
+            if name in u.specs and u.specs[name].value <= 0:
+                issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec=name,
+                                     min=0, max=None))
     if "vapor_fraction" in u.specs and not 0 <= u.specs["vapor_fraction"].value <= 1:
         issues.append(_error("out_of_range", "unit", u.id, target=u.id,
                              spec="vapor_fraction", min=0, max=1))
@@ -1152,7 +1183,38 @@ def _solve_shortcut_column(u, inlets, outs, th, fs):
     }
 
 
+def _solve_distillation_column(u, inlets, outs, th, fs):
+    """Rigorous column by the bubble-point method (see column.py)."""
+    feed = inlets["in"]
+    P = u.specs["pressure"].value if "pressure" in u.specs else feed.P
+    _require_positive_pressure(u, P)
+    if feed.F <= _ZERO_FLOW:
+        raise _InputError(_error("column_empty_feed", "unit", u.id, target=u.id))
+    if len(th.ids) < 2:
+        raise _InputError(_error("column_needs_two_components", "unit", u.id, target=u.id))
+    try:
+        r = solve_column(th, list(feed.zs), feed.F, feed.H, P,  # type: ignore[arg-type]
+                         int(u.specs["number_of_stages"].value), int(u.specs["feed_stage"].value),
+                         u.specs["reflux_ratio"].value, u.specs["distillate_rate"].value)
+    except ColumnError as exc:
+        raise _InputError(_error(exc.code, "unit", u.id, target=u.id, **exc.params)) from exc
+    N = len(r.T)
+    dist = _State(r.T[0], P, r.D, r.x[0], r.HL[0], 0.0)
+    bott = _State(r.T[N - 1], P, r.B, r.x[N - 1], r.HL[N - 1], 0.0)
+    return {"distillate": dist, "bottoms": bott}, {
+        "condenser_duty": _q(r.Qc, "W"),
+        "reboiler_duty": _q(r.Qr, "W"),
+        "top_temperature": _q(r.T[0], "K"),
+        "bottom_temperature": _q(r.T[N - 1], "K"),
+        "reflux_rate": _q(r.L[0], "mol/s"),
+        "boilup_rate": _q(r.V[N - 1], "mol/s"),
+        "iterations": _q(float(r.iterations), "1"),
+        "pressure": _q(P, "Pa"),
+    }
+
+
 _SOLVERS: dict[str, Solver] = {
+    "distillation_column": _solve_distillation_column,
     "pump": _solve_pump,
     "compressor": _solve_compressor,
     "heat_exchanger": _solve_heat_exchanger,

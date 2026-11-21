@@ -53,6 +53,14 @@ export const UNITS: UnitDef[] = [
       { key: "reflux", options: ["reflux_ratio_factor"] },
       { key: "column_pressure", options: ["pressure"], optional: true },
     ], available: true },
+  { type: "distillation_column", category: "separation", prefix: "T", inlets: ["in"], outlets: ["distillate", "bottoms"],
+    groups: [
+      { key: "number_of_stages", options: ["number_of_stages"] },
+      { key: "feed_stage", options: ["feed_stage"] },
+      { key: "reflux_ratio", options: ["reflux_ratio"] },
+      { key: "distillate_rate", options: ["distillate_rate"] },
+      { key: "column_pressure", options: ["pressure"], optional: true },
+    ], available: true },
 ];
 
 export const CATEGORIES: Category[] = ["io", "mixing", "separation", "heat", "pressure", "reaction"];
@@ -78,6 +86,10 @@ export const SPEC_UNITS: Record<string, string> = {
   lk_recovery: "1",
   hk_recovery: "1",
   reflux_ratio_factor: "1",
+  number_of_stages: "1",
+  feed_stage: "1",
+  reflux_ratio: "1",
+  distillate_rate: "mol/s",
 };
 
 export function specUnit(name: string): string {

@@ -74,7 +74,9 @@ describe.skipIf(!DIST || !WHEEL_DIR)("engine in Pyodide (T03 spike)", () => {
     expect(first.converged).toBe(true);
     // Every example (pumps, columns, reactors, recycle loops) also solves in Pyodide.
     for (const f of readdirSync(join(ROOT, "examples")).filter((n) => n.endsWith(".opd.json"))) {
+      const t = performance.now();
       const r = engine.simulate(JSON.parse(readFileSync(join(ROOT, "examples", f), "utf-8")));
+      console.log(`example ${f}: ${Math.round(performance.now() - t)} ms`);
       expect(r.converged, f).toBe(true);
     }
     const vapor = (first.document.results as any).streams.S2;

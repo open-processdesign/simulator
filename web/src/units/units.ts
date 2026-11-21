@@ -60,6 +60,13 @@ const KIND_BY_NAME: Record<string, Kind> = {
   minimum_reflux_ratio: "number",
   reflux_ratio: "number",
   relative_volatility: "number",
+  number_of_stages: "number",
+  reflux_rate: "molar_flow",
+  boilup_rate: "molar_flow",
+  distillate_rate: "molar_flow",
+  top_temperature: "temperature",
+  bottom_temperature: "temperature",
+  iterations: "number",
 };
 
 /** Kind of a spec, state field or result by its OPD name (unknown names are dimensionless). */

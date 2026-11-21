@@ -46,6 +46,20 @@
     "unknown_unit": "{{target}}: var olmayan \"{{unit}}\" ünitesine bağlı.",
     "unknown_component": "{{target}}: tanımsız bileşen(ler) {{components}}.",
     "port_used_twice": "{{target}}: \"{{port}}\" bağlantı noktasında birden fazla akım var.",
-    "layout_orphan": "Var olmayan \"{{unit}}\" ünitesi için tuval konumu kayıtlı."
+    "layout_orphan": "Var olmayan \"{{unit}}\" ünitesi için tuval konumu kayıtlı.",
+    "invalid_document": "Dosya geçerli bir OPD akış şeması değil ({{where}}: {{detail}}).",
+    "unsupported_thermo": "{{package}} özellik paketi {{engine}} motorunda henüz yok.",
+    "unsupported_unit": "{{target}}: \"{{type}}\" ünite tipi {{engine}} motorunda henüz yok.",
+    "non_si_unit": "{{target}}: {{spec}} \"{{unit}}\" biriminde verilmiş; {{expected}} kullanın.",
+    "conflicting_specs": "{{target}}: {{specs}} değerlerinden yalnızca birini girin.",
+    "unknown_port": "{{target}}: {{type}} ünitesinde \"{{port}}\" bağlantı noktası yok.",
+    "unknown_spec": "{{target}}: \"{{spec}}\" bu ünitenin bir ayarı değil.",
+    "too_few_outlets": "{{target}}: en az {{minimum}} çıkış akımı bağlayın.",
+    "split_needs_one_open_outlet": "{{target}}: biri hariç her çıkış için bölme oranı girin.",
+    "invalid_split": "{{target}}: bölme oranları 0 ile 1 arasında olmalı ve toplamı en fazla 1 olmalı (şu an {{sum}}).",
+    "out_of_range": "{{target}}: {{spec}} izin verilen aralığın dışında.",
+    "recycle_not_supported": "{{target}}: bir geri döngü (recycle) içinde; {{engine}} motoru geri döngüleri henüz desteklemiyor.",
+    "calculation_failed": "{{target}}: hesap yakınsamadı ({{detail}}).",
+    "unknown_component_data": "Bir bileşen için özellik verisi bulunamadı ({{detail}})."
   }
 }

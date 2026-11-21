@@ -1,0 +1,356 @@
+{
+  "format": "opd-flowsheet",
+  "version": "0.1",
+  "name": "Toluene hydrodealkylation loop (simplified)",
+  "description": "Toluene + H2 → benzene + CH4 at fixed conversion, with gas recycle and purge. Simplified teaching case, not the full HDA process.",
+  "components": [
+    {
+      "id": "toluene",
+      "name": "toluene",
+      "cas": "108-88-3",
+      "formula": "C7H8"
+    },
+    {
+      "id": "hydrogen",
+      "name": "hydrogen",
+      "cas": "1333-74-0",
+      "formula": "H2"
+    },
+    {
+      "id": "benzene",
+      "name": "benzene",
+      "cas": "71-43-2",
+      "formula": "C6H6"
+    },
+    {
+      "id": "methane",
+      "name": "methane",
+      "cas": "74-82-8",
+      "formula": "CH4"
+    }
+  ],
+  "thermo": {
+    "package": "PR"
+  },
+  "units": [
+    {
+      "id": "FEED-1",
+      "type": "feed",
+      "label": "Toluene"
+    },
+    {
+      "id": "FEED-2",
+      "type": "feed",
+      "label": "Hydrogen"
+    },
+    {
+      "id": "M-1",
+      "type": "mixer"
+    },
+    {
+      "id": "H-1",
+      "type": "heater",
+      "label": "Furnace",
+      "specs": {
+        "temperature": {
+          "value": 895.0,
+          "unit": "K"
+        }
+      }
+    },
+    {
+      "id": "R-1",
+      "type": "conversion_reactor",
+      "label": "Reactor",
+      "specs": {
+        "duty": {
+          "value": 0.0,
+          "unit": "W"
+        },
+        "pressure_drop": {
+          "value": 50000,
+          "unit": "Pa"
+        }
+      },
+      "options": {
+        "reactions": [
+          {
+            "stoichiometry": {
+              "toluene": -1,
+              "hydrogen": -1,
+              "benzene": 1,
+              "methane": 1
+            },
+            "key": "toluene",
+            "conversion": 0.75
+          }
+        ]
+      }
+    },
+    {
+      "id": "H-2",
+      "type": "heater",
+      "label": "Cooler",
+      "specs": {
+        "temperature": {
+          "value": 310.0,
+          "unit": "K"
+        }
+      }
+    },
+    {
+      "id": "F-1",
+      "type": "flash",
+      "label": "Separator",
+      "specs": {
+        "pressure_drop": {
+          "value": 0,
+          "unit": "Pa"
+        },
+        "duty": {
+          "value": 0.0,
+          "unit": "W"
+        }
+      }
+    },
+    {
+      "id": "SP-1",
+      "type": "splitter",
+      "specs": {
+        "split_out1": {
+          "value": 0.2,
+          "unit": "1"
+        }
+      }
+    },
+    {
+      "id": "C-1",
+      "type": "compressor",
+      "label": "Recycle compressor",
+      "specs": {
+        "pressure": {
+          "value": 2500000.0,
+          "unit": "Pa"
+        },
+        "efficiency": {
+          "value": 0.75,
+          "unit": "1"
+        }
+      }
+    },
+    {
+      "id": "PROD-1",
+      "type": "product",
+      "label": "Purge"
+    },
+    {
+      "id": "PROD-2",
+      "type": "product",
+      "label": "Liquid product"
+    }
+  ],
+  "streams": [
+    {
+      "id": "S1",
+      "from": {
+        "unit": "FEED-1",
+        "port": "out"
+      },
+      "to": {
+        "unit": "M-1",
+        "port": "in1"
+      },
+      "state": {
+        "temperature": {
+          "value": 303.0,
+          "unit": "K"
+        },
+        "pressure": {
+          "value": 2500000.0,
+          "unit": "Pa"
+        },
+        "molar_flow": {
+          "value": 35.0,
+          "unit": "mol/s"
+        },
+        "mole_fractions": {
+          "toluene": 1.0
+        }
+      }
+    },
+    {
+      "id": "S2",
+      "from": {
+        "unit": "FEED-2",
+        "port": "out"
+      },
+      "to": {
+        "unit": "M-1",
+        "port": "in2"
+      },
+      "state": {
+        "temperature": {
+          "value": 303.0,
+          "unit": "K"
+        },
+        "pressure": {
+          "value": 2500000.0,
+          "unit": "Pa"
+        },
+        "molar_flow": {
+          "value": 50.0,
+          "unit": "mol/s"
+        },
+        "mole_fractions": {
+          "hydrogen": 0.95,
+          "methane": 0.05
+        }
+      }
+    },
+    {
+      "id": "S3",
+      "from": {
+        "unit": "M-1",
+        "port": "out"
+      },
+      "to": {
+        "unit": "H-1",
+        "port": "in"
+      }
+    },
+    {
+      "id": "S4",
+      "from": {
+        "unit": "H-1",
+        "port": "out"
+      },
+      "to": {
+        "unit": "R-1",
+        "port": "in"
+      }
+    },
+    {
+      "id": "S5",
+      "from": {
+        "unit": "R-1",
+        "port": "out"
+      },
+      "to": {
+        "unit": "H-2",
+        "port": "in"
+      }
+    },
+    {
+      "id": "S6",
+      "from": {
+        "unit": "H-2",
+        "port": "out"
+      },
+      "to": {
+        "unit": "F-1",
+        "port": "in"
+      }
+    },
+    {
+      "id": "S7",
+      "from": {
+        "unit": "F-1",
+        "port": "vapor"
+      },
+      "to": {
+        "unit": "SP-1",
+        "port": "in"
+      }
+    },
+    {
+      "id": "S8",
+      "from": {
+        "unit": "SP-1",
+        "port": "out1"
+      },
+      "to": {
+        "unit": "PROD-1",
+        "port": "in"
+      }
+    },
+    {
+      "id": "S9",
+      "from": {
+        "unit": "SP-1",
+        "port": "out2"
+      },
+      "to": {
+        "unit": "C-1",
+        "port": "in"
+      }
+    },
+    {
+      "id": "S10",
+      "from": {
+        "unit": "F-1",
+        "port": "liquid"
+      },
+      "to": {
+        "unit": "PROD-2",
+        "port": "in"
+      }
+    },
+    {
+      "id": "S11",
+      "from": {
+        "unit": "C-1",
+        "port": "out"
+      },
+      "to": {
+        "unit": "M-1",
+        "port": "in3"
+      }
+    }
+  ],
+  "layout": {
+    "FEED-1": {
+      "x": 0,
+      "y": 60
+    },
+    "FEED-2": {
+      "x": 0,
+      "y": 200
+    },
+    "M-1": {
+      "x": 170,
+      "y": 120
+    },
+    "H-1": {
+      "x": 330,
+      "y": 120
+    },
+    "R-1": {
+      "x": 490,
+      "y": 120
+    },
+    "H-2": {
+      "x": 650,
+      "y": 120
+    },
+    "F-1": {
+      "x": 810,
+      "y": 120
+    },
+    "SP-1": {
+      "x": 810,
+      "y": -60
+    },
+    "PROD-1": {
+      "x": 990,
+      "y": -110
+    },
+    "PROD-2": {
+      "x": 990,
+      "y": 230
+    },
+    "C-1": {
+      "x": 490,
+      "y": -60
+    }
+  }
+}

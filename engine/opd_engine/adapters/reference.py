@@ -6,7 +6,8 @@ own modules. All property and phase-equilibrium numbers come from `thermo`
 (Caleb Bell et al., https://github.com/CalebBell/thermo, MIT); this module only does
 bookkeeping: port conventions, material and energy balances, and the solve order.
 
-Scope: units feed, product, mixer, splitter, heater, valve, flash; property packages
+Scope: units feed, product, mixer, splitter, heater, valve, flash, pump, compressor,
+heat exchanger, conversion reactor, shortcut column (T09); property packages
 IDEAL (Raoult), PR and SRK; recycle loops through tear streams converged with bounded
 Wegstein or successive substitution (see `recycle.py`, T08).
 
@@ -27,6 +28,21 @@ heater     in, out                exactly one of temperature, duty, vapor_fracti
 valve      in, out                pressure *or* pressure_drop; isenthalpic
 flash      in, vapor, liquid      pressure *or* pressure_drop, and exactly one of
                                   temperature, duty, vapor_fraction
+pump       in, out                pressure *or* pressure_increase; optional efficiency
+                                  (default 0.75)
+compressor in, out                pressure *or* pressure_increase; optional isentropic
+                                  efficiency (default 0.75)
+heat_      hot_in, hot_out,       exactly one of hot_outlet_temperature,
+exchanger  cold_in, cold_out      cold_outlet_temperature, duty; optional
+                                  hot_pressure_drop, cold_pressure_drop; counter-current
+conversion in, out                options.reactions = [{stoichiometry: {component: ν},
+_reactor                          key: component, conversion: 0…1}, …] applied in order;
+                                  exactly one of temperature, duty; optional pressure
+                                  *or* pressure_drop
+shortcut_  in, distillate,        options.light_key, options.heavy_key; specs
+column     bottoms                lk_recovery (to distillate), hk_recovery (to bottoms),
+                                  reflux_ratio_factor (R/Rmin); optional pressure;
+                                  total condenser
 =========  =====================  ==========================================================
 
 Duty is heat added to the process stream (W): positive for heating, negative for cooling.
@@ -60,7 +76,9 @@ from ..adapter import Capabilities, Issue, OPDDocument, Severity, SimulationResu
 from ..models import Flowsheet, Stream, Unit, check_references, load
 from .recycle import Accelerator, Block, Edge, solve_plan
 
-UNIT_TYPES = frozenset({"feed", "product", "mixer", "splitter", "heater", "valve", "flash"})
+UNIT_TYPES = frozenset({"feed", "product", "mixer", "splitter", "heater", "valve", "flash",
+                        "pump", "compressor", "heat_exchanger", "conversion_reactor",
+                        "shortcut_column"})
 THERMO_PACKAGES = frozenset({"IDEAL", "PR", "SRK"})
 
 # SI unit strings accepted per spec name (v0.1 stores SI only).
@@ -71,6 +89,15 @@ _SI = {
     "duty": {"W"},
     "molar_flow": {"mol/s"},
     "vapor_fraction": {"1", "-", ""},
+    "pressure_increase": {"Pa"},
+    "efficiency": {"1", "-", ""},
+    "hot_outlet_temperature": {"K"},
+    "cold_outlet_temperature": {"K"},
+    "hot_pressure_drop": {"Pa"},
+    "cold_pressure_drop": {"Pa"},
+    "lk_recovery": {"1", "-", ""},
+    "hk_recovery": {"1", "-", ""},
+    "reflux_ratio_factor": {"1", "-", ""},
 }
 _FRACTION_UNITS = {"1", "-", ""}
 
@@ -154,6 +181,17 @@ class _Thermo:
                 self.issues.append(_issue(Severity.WARNING, "missing_binary_parameter",
                                           "thermo", None, i=row["i"], j=row["j"]))
         return kij
+
+    def Hf(self, zs: list[float]) -> float:
+        """Σ z_i ΔHf_i (ideal gas, 298.15 K), J/mol: shifts thermo's H to a reaction basis."""
+        return sum(z * hf for z, hf in zip(zs, self.constants.Hfgs))
+
+    def liquid_volume(self, zs: list[float], T: float) -> float:
+        """Liquid molar volume, m³/mol, from pure-component correlations (Amagat mixing)."""
+        return sum(z * vl.T_dependent_property(T) for z, vl in zip(zs, self.props.VolumeLiquids) if z > 0)
+
+    def entropy(self, zs: list[float], T: float, P: float) -> float:
+        return self.flash_raw(zs, T=T, P=P).S()
 
     def flash_raw(self, zs: list[float], **spec: float) -> Any:
         """Run a `thermo` flash for composition `zs` (pure components need no `zs`)."""
@@ -279,8 +317,9 @@ class ReferenceAdapter:
             return issues
 
         ins, outs = _connections(fs)
+        comp_ids = [c.id for c in fs.components]
         for u in fs.units:
-            issues += _check_unit(u, ins.get(u.id, {}), outs.get(u.id, {}))
+            issues += _check_unit(u, ins.get(u.id, {}), outs.get(u.id, {}), comp_ids)
         for s in fs.streams:
             src = fs.unit(s.from_.unit)
             if src is not None and src.type == "feed":
@@ -490,7 +529,8 @@ def _one_of(u: Unit, names: tuple[str, ...], required: bool) -> list[Issue]:
     return []
 
 
-def _check_unit(u: Unit, ins: dict[str, str], outs: dict[str, str]) -> list[Issue]:
+def _check_unit(u: Unit, ins: dict[str, str], outs: dict[str, str],
+                comp_ids: list[str] | None = None) -> list[Issue]:
     issues: list[Issue] = []
 
     def need(port: str, ports: dict[str, str]) -> None:
@@ -541,9 +581,85 @@ def _check_unit(u: Unit, ins: dict[str, str], outs: dict[str, str]) -> list[Issu
         issues += _one_of(u, ("pressure", "pressure_drop"), required=t != "heater")
         if t in ("heater", "flash"):
             issues += _one_of(u, ("temperature", "duty", "vapor_fraction"), required=True)
-        if "vapor_fraction" in u.specs and not 0 <= u.specs["vapor_fraction"].value <= 1:
+    elif t in ("pump", "compressor"):
+        need("in", ins)
+        need("out", outs)
+        no_extra({"in"}, ins)
+        no_extra({"out"}, outs)
+        issues += _one_of(u, ("pressure", "pressure_increase"), required=True)
+        if "pressure_increase" in u.specs and u.specs["pressure_increase"].value < 0:
             issues.append(_error("out_of_range", "unit", u.id, target=u.id,
-                                 spec="vapor_fraction", min=0, max=1))
+                                 spec="pressure_increase", min=0, max=None))
+    elif t == "heat_exchanger":
+        for p in ("hot_in", "cold_in"):
+            need(p, ins)
+        for p in ("hot_out", "cold_out"):
+            need(p, outs)
+        no_extra({"hot_in", "cold_in"}, ins)
+        no_extra({"hot_out", "cold_out"}, outs)
+        issues += _one_of(u, ("hot_outlet_temperature", "cold_outlet_temperature", "duty"),
+                          required=True)
+    elif t == "conversion_reactor":
+        need("in", ins)
+        need("out", outs)
+        no_extra({"in"}, ins)
+        no_extra({"out"}, outs)
+        issues += _one_of(u, ("pressure", "pressure_drop"), required=False)
+        issues += _one_of(u, ("temperature", "duty"), required=True)
+        issues += _check_reactions(u, comp_ids or [])
+    elif t == "shortcut_column":
+        need("in", ins)
+        for p in ("distillate", "bottoms"):
+            need(p, outs)
+        no_extra({"in"}, ins)
+        no_extra({"distillate", "bottoms"}, outs)
+        for name in ("lk_recovery", "hk_recovery", "reflux_ratio_factor"):
+            if name not in u.specs:
+                issues.append(_missing("unit", u.id, name))
+        for name in ("lk_recovery", "hk_recovery"):
+            if name in u.specs and not 0 < u.specs[name].value < 1:
+                issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec=name,
+                                     min=0, max=1))
+        if "reflux_ratio_factor" in u.specs and u.specs["reflux_ratio_factor"].value <= 1:
+            issues.append(_error("out_of_range", "unit", u.id, target=u.id,
+                                 spec="reflux_ratio_factor", min=1, max=None))
+        lk, hk = u.options.get("light_key"), u.options.get("heavy_key")
+        for name, key in (("light_key", lk), ("heavy_key", hk)):
+            if not key:
+                issues.append(_missing("unit", u.id, name))
+            elif key not in (comp_ids or []):
+                issues.append(_error("unknown_component", "unit", u.id, target=u.id,
+                                     components=[key]))
+        if lk and hk and lk == hk:
+            issues.append(_error("same_keys", "unit", u.id, target=u.id))
+    if "vapor_fraction" in u.specs and not 0 <= u.specs["vapor_fraction"].value <= 1:
+        issues.append(_error("out_of_range", "unit", u.id, target=u.id,
+                             spec="vapor_fraction", min=0, max=1))
+    if "efficiency" in u.specs and not 0 < u.specs["efficiency"].value <= 1:
+        issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec="efficiency",
+                             min=0, max=1))
+    return issues
+
+
+def _check_reactions(u: Unit, comp_ids: list[str]) -> list[Issue]:
+    reactions = u.options.get("reactions")
+    if not isinstance(reactions, list) or not reactions:
+        return [_missing("unit", u.id, "reactions")]
+    issues: list[Issue] = []
+    for k, r in enumerate(reactions, start=1):
+        stoich = r.get("stoichiometry") if isinstance(r, dict) else None
+        key, conv = (r.get("key"), r.get("conversion")) if isinstance(r, dict) else (None, None)
+        if not isinstance(stoich, dict) or not stoich:
+            issues.append(_error("invalid_reaction", "unit", u.id, target=u.id, reaction=k))
+            continue
+        unknown = sorted(c for c in stoich if c not in comp_ids)
+        if unknown:
+            issues.append(_error("unknown_component", "unit", u.id, target=u.id, components=unknown))
+        if key not in stoich or not isinstance(stoich.get(key), (int, float)) or stoich[key] >= 0:
+            issues.append(_error("invalid_reaction_key", "unit", u.id, target=u.id, reaction=k))
+        if not isinstance(conv, (int, float)) or not 0 <= conv <= 1:
+            issues.append(_error("out_of_range", "unit", u.id, target=u.id,
+                                 spec=f"conversion {k}", min=0, max=1))
     return issues
 
 
@@ -648,6 +764,7 @@ def _thermal_spec(u: Unit, feed: _State, P: float) -> dict[str, float]:
     return {"P": P, "H": feed.H + duty / feed.F}  # type: ignore[operator]
 
 
+
 def _solve_heater(u, inlets, outs, th, fs):
     feed = inlets["in"]
     P = _outlet_pressure(u, feed.P)
@@ -703,7 +820,238 @@ def _solve_flash(u, inlets, outs, th, fs):
     }
 
 
+def _pressure_up(u: Unit, P_in: float) -> float:
+    if "pressure" in u.specs:
+        return u.specs["pressure"].value
+    return P_in + u.specs["pressure_increase"].value
+
+
+def _solve_pump(u, inlets, outs, th, fs):
+    """Shaft power W = F·V_L·ΔP / η, V_L from liquid-volume correlations (incompressible
+    liquid; e.g. McCabe, Smith & Harriott, *Unit Operations of Chemical Engineering*,
+    7th ed., §8). The outlet follows from the energy balance H_out = H_in + W/F."""
+    feed = inlets["in"]
+    P = _pressure_up(u, feed.P)
+    eta = u.specs["efficiency"].value if "efficiency" in u.specs else 0.75
+    if feed.F <= _ZERO_FLOW:
+        return {"out": _empty(feed.T, P)}, {"power": _q(0.0, "W")}
+    issues = []
+    if (feed.VF or 0.0) > 1e-9:
+        raise _InputError(_error("pump_vapor_inlet", "unit", u.id, target=u.id,
+                                 vapor_fraction=round(feed.VF or 0.0, 4)))
+    V = th.liquid_volume(feed.zs, feed.T)  # type: ignore[arg-type]
+    power = feed.F * V * (P - feed.P) / eta
+    out = _scaled(th.flash(feed.zs, P=P, H=feed.H + power / feed.F), feed.F)  # type: ignore[arg-type, operator]
+    del issues
+    return {"out": out}, {
+        "power": _q(power, "W"),
+        "pressure_increase": _q(P - feed.P, "Pa"),
+        "temperature": _q(out.T, "K"),
+        "efficiency": _q(eta, "1"),
+    }
+
+
+def _solve_compressor(u, inlets, outs, th, fs):
+    """Isentropic outlet from S(P_out) = S_in, then W = F·(H_s − H_in)/η_s
+    (Smith, Van Ness & Abbott, *Introduction to Chemical Engineering Thermodynamics*, ch. 7)."""
+    feed = inlets["in"]
+    P = _pressure_up(u, feed.P)
+    eta = u.specs["efficiency"].value if "efficiency" in u.specs else 0.75
+    if feed.F <= _ZERO_FLOW:
+        return {"out": _empty(feed.T, P)}, {"power": _q(0.0, "W")}
+    if (feed.VF if feed.VF is not None else 1.0) < 1 - 1e-9:
+        raise _InputError(_error("compressor_liquid_inlet", "unit", u.id, target=u.id,
+                                 vapor_fraction=round(feed.VF or 0.0, 4)))
+    S_in = th.entropy(feed.zs, feed.T, feed.P)  # type: ignore[arg-type]
+    iso = th.flash_raw(feed.zs, P=P, S=S_in)  # type: ignore[arg-type]
+    dH = (iso.H() - feed.H) / eta  # type: ignore[operator]
+    out = _scaled(th.flash(feed.zs, P=P, H=feed.H + dH), feed.F)  # type: ignore[arg-type, operator]
+    return {"out": out}, {
+        "power": _q(feed.F * dH, "W"),
+        "temperature": _q(out.T, "K"),
+        "isentropic_temperature": _q(iso.T, "K"),
+        "pressure_increase": _q(P - feed.P, "Pa"),
+        "efficiency": _q(eta, "1"),
+    }
+
+
+def _solve_heat_exchanger(u, inlets, outs, th, fs):
+    """Two-stream counter-current exchanger from the energy balance Q = ΔH_hot = −ΔH_cold.
+    Reports end approach temperatures and, if both are positive, LMTD and UA = Q/LMTD."""
+    hot, cold = inlets["hot_in"], inlets["cold_in"]
+    Ph = hot.P - (u.specs["hot_pressure_drop"].value if "hot_pressure_drop" in u.specs else 0.0)
+    Pc = cold.P - (u.specs["cold_pressure_drop"].value if "cold_pressure_drop" in u.specs else 0.0)
+    _require_positive_pressure(u, min(Ph, Pc))
+    if hot.F <= _ZERO_FLOW or cold.F <= _ZERO_FLOW:
+        raise _InputError(_error("hx_empty_side", "unit", u.id, target=u.id))
+    if "hot_outlet_temperature" in u.specs:
+        h_out = _scaled(th.flash(hot.zs, T=u.specs["hot_outlet_temperature"].value, P=Ph), hot.F)  # type: ignore[arg-type]
+        Q = hot.F * (hot.H - h_out.H)  # type: ignore[operator]
+        c_out = _scaled(th.flash(cold.zs, P=Pc, H=cold.H + Q / cold.F), cold.F)  # type: ignore[arg-type, operator]
+    elif "cold_outlet_temperature" in u.specs:
+        c_out = _scaled(th.flash(cold.zs, T=u.specs["cold_outlet_temperature"].value, P=Pc), cold.F)  # type: ignore[arg-type]
+        Q = cold.F * (c_out.H - cold.H)  # type: ignore[operator]
+        h_out = _scaled(th.flash(hot.zs, P=Ph, H=hot.H - Q / hot.F), hot.F)  # type: ignore[arg-type, operator]
+    else:
+        Q = u.specs["duty"].value
+        h_out = _scaled(th.flash(hot.zs, P=Ph, H=hot.H - Q / hot.F), hot.F)  # type: ignore[arg-type, operator]
+        c_out = _scaled(th.flash(cold.zs, P=Pc, H=cold.H + Q / cold.F), cold.F)  # type: ignore[arg-type, operator]
+    dT_hot_end = hot.T - c_out.T  # hot inlet against cold outlet
+    dT_cold_end = h_out.T - cold.T  # hot outlet against cold inlet
+    results = {
+        "duty": _q(Q, "W"),
+        "hot_outlet_temperature": _q(h_out.T, "K"),
+        "cold_outlet_temperature": _q(c_out.T, "K"),
+        "approach_hot_end": _q(dT_hot_end, "K"),
+        "approach_cold_end": _q(dT_cold_end, "K"),
+    }
+    if Q < 0 or min(dT_hot_end, dT_cold_end) <= 0:
+        raise _InputError(_error("temperature_cross", "unit", u.id, target=u.id,
+                                 hot_end=round(dT_hot_end, 2), cold_end=round(dT_cold_end, 2)))
+    if abs(dT_hot_end - dT_cold_end) > 1e-9:
+        lmtd = (dT_hot_end - dT_cold_end) / math.log(dT_hot_end / dT_cold_end)
+    else:
+        lmtd = dT_hot_end
+    results["lmtd"] = _q(lmtd, "K")
+    results["ua"] = _q(Q / lmtd, "W/K")
+    return {"hot_out": h_out, "cold_out": c_out}, results
+
+
+def _solve_conversion_reactor(u, inlets, outs, th, fs):
+    """Fixed-conversion reactions applied in order: ξ_r = X_r·n_key/(−ν_key). Energy balance
+    on a formation-enthalpy basis, H + Σ z_i ΔHf_i (ideal gas, 298.15 K)."""
+    feed = inlets["in"]
+    P = _outlet_pressure(u, feed.P)
+    _require_positive_pressure(u, P)
+    if feed.F <= _ZERO_FLOW:
+        return {"out": _empty(feed.T, P)}, {"duty": _q(0.0, "W")}
+    index = {cid: k for k, cid in enumerate(th.ids)}
+    flows = [feed.F * z for z in feed.zs]  # type: ignore[union-attr]
+    results: dict[str, dict[str, Any]] = {}
+    mws = th.constants.MWs
+    for k, r in enumerate(u.options["reactions"], start=1):
+        stoich = {c: float(v) for c, v in r["stoichiometry"].items()}
+        mass = sum(v * mws[index[c]] for c, v in stoich.items())
+        scale = sum(abs(v) * mws[index[c]] for c, v in stoich.items())
+        if abs(mass) > 1e-3 * scale:
+            raise _InputError(_error("unbalanced_reaction", "unit", u.id, target=u.id, reaction=k,
+                                     imbalance=round(mass, 4)))
+        key = r["key"]
+        extent = float(r["conversion"]) * flows[index[key]] / -stoich[key]
+        for c, v in stoich.items():
+            flows[index[c]] += v * extent
+        if min(flows) < -1e-9 * feed.F:
+            raise _InputError(_error("reaction_overconsumes", "unit", u.id, target=u.id, reaction=k))
+        flows = [max(0.0, f) for f in flows]
+        results[f"extent_{k}"] = _q(extent, "mol/s")
+    F = sum(flows)
+    zs = [f / F for f in flows]
+    H_in = feed.F * (feed.H + th.Hf(feed.zs))  # type: ignore[arg-type, operator]
+    if "temperature" in u.specs:
+        out = _scaled(th.flash(zs, T=u.specs["temperature"].value, P=P), F)
+        duty = F * (out.H + th.Hf(zs)) - H_in  # type: ignore[operator]
+    else:
+        duty = u.specs["duty"].value
+        out = _scaled(th.flash(zs, P=P, H=(H_in + duty) / F - th.Hf(zs)), F)
+    results.update({
+        "duty": _q(duty, "W"),
+        "temperature": _q(out.T, "K"),
+        "pressure": _q(P, "Pa"),
+        "vapor_fraction": _q(out.VF, "1"),
+    })
+    return {"out": out}, results
+
+
+def _solve_shortcut_column(u, inlets, outs, th, fs):
+    """Fenske–Underwood–Gilliland shortcut design with a total condenser.
+
+    Constant relative volatilities α_i = K_i/K_HK from a flash of the feed composition at
+    column pressure and vapour fraction 0.5; Fenske for N_min and non-key distribution;
+    Underwood (one root between the keys) for R_min; Gilliland's correlation in the form of
+    Molokanov et al. (1972) for N; Kirkbride (1944) for the feed stage. See Seader, Henley &
+    Roper, *Separation Process Principles*, 3rd ed., Wiley (2011), ch. 9.
+    """
+    feed = inlets["in"]
+    P = u.specs["pressure"].value if "pressure" in u.specs else feed.P
+    _require_positive_pressure(u, P)
+    if feed.F <= _ZERO_FLOW:
+        raise _InputError(_error("column_empty_feed", "unit", u.id, target=u.id))
+    ids = th.ids
+    z = list(feed.zs)  # type: ignore[arg-type]
+    lk, hk = ids.index(u.options["light_key"]), ids.index(u.options["heavy_key"])
+    r_lk, r_hk = u.specs["lk_recovery"].value, u.specs["hk_recovery"].value
+    factor = u.specs["reflux_ratio_factor"].value
+
+    mid = th.flash_raw(z, P=P, VF=0.5)
+    if mid.gas is None or mid.liquid0 is None:
+        raise _InputError(_error("column_no_two_phase", "unit", u.id, target=u.id))
+    K = [y / x if x > 0 else math.inf for y, x in zip(mid.gas.zs, mid.liquid0.zs)]
+    alpha = [k / K[hk] for k in K]
+    if alpha[lk] <= 1:
+        raise _InputError(_error("keys_not_volatile", "unit", u.id, target=u.id))
+
+    # Fenske: minimum stages and distribution of all components at total reflux.
+    n_min = math.log((r_lk / (1 - r_lk)) * (r_hk / (1 - r_hk))) / math.log(alpha[lk])
+    ratio_hk = (1 - r_hk) / r_hk  # d/b of the heavy key
+    f = [feed.F * zi for zi in z]
+    d = [fi * (a ** n_min * ratio_hk) / (1 + a ** n_min * ratio_hk) for fi, a in zip(f, alpha)]
+    b = [fi - di for fi, di in zip(f, d)]
+    D, B = sum(d), sum(b)
+    xD, xB = [di / D for di in d], [bi / B for bi in b]
+
+    # Feed thermal condition q (liquid fraction after letdown to column pressure).
+    q = 1 - th.flash(z, P=P, H=feed.H).VF  # type: ignore[arg-type, operator]
+
+    # Underwood: Σ α_i z_i / (α_i − θ) = 1 − q with 1 < θ < α_LK (bisection).
+    def underwood(theta: float) -> float:
+        return sum(a * zi / (a - theta) for a, zi in zip(alpha, z) if zi > 0) - (1 - q)
+
+    lo, hi = 1.0 + 1e-9, alpha[lk] - 1e-9
+    for _ in range(200):
+        theta = (lo + hi) / 2
+        if underwood(theta) > 0:
+            hi = theta
+        else:
+            lo = theta
+    r_min = sum(a * x / (a - theta) for a, x in zip(alpha, xD)) - 1
+    if r_min <= 0:
+        raise _InputError(_error("column_rmin_invalid", "unit", u.id, target=u.id))
+    R = factor * r_min
+
+    # Gilliland (Molokanov form).
+    X = (R - r_min) / (R + 1)
+    Y = 1 - math.exp((1 + 54.4 * X) / (11 + 117.2 * X) * (X - 1) / math.sqrt(X))
+    n = (n_min + Y) / (1 - Y)
+
+    # Kirkbride: N_R/N_S = [(z_HK/z_LK)(x_B,LK/x_D,HK)² (B/D)]^0.206.
+    ratio = ((z[hk] / z[lk]) * (xB[lk] / xD[hk]) ** 2 * (B / D)) ** 0.206
+    feed_stage = n * ratio / (1 + ratio)
+
+    dist = th.flash(xD, P=P, VF=0.0)
+    bott = th.flash(xB, P=P, VF=0.0)
+    dew = th.flash(xD, P=P, VF=1.0)
+    q_cond = -(R + 1) * D * (dew.H - dist.H)  # type: ignore[operator]
+    q_reb = D * dist.H + B * bott.H - feed.F * feed.H - q_cond  # type: ignore[operator]
+
+    return {"distillate": _scaled(dist, D), "bottoms": _scaled(bott, B)}, {
+        "minimum_stages": _q(n_min, "1"),
+        "stages": _q(n, "1"),
+        "feed_stage": _q(feed_stage, "1"),
+        "minimum_reflux_ratio": _q(r_min, "1"),
+        "reflux_ratio": _q(R, "1"),
+        "relative_volatility": _q(alpha[lk], "1"),
+        "condenser_duty": _q(q_cond, "W"),
+        "reboiler_duty": _q(q_reb, "W"),
+        "pressure": _q(P, "Pa"),
+    }
+
+
 _SOLVERS: dict[str, Solver] = {
+    "pump": _solve_pump,
+    "compressor": _solve_compressor,
+    "heat_exchanger": _solve_heat_exchanger,
+    "conversion_reactor": _solve_conversion_reactor,
+    "shortcut_column": _solve_shortcut_column,
     "feed": _solve_feed,
     "product": _solve_product,
     "mixer": _solve_mixer,

@@ -6,9 +6,8 @@ import { IssueList } from "./IssueList";
 import { RunButton } from "./RunButton";
 import { StreamTable } from "./StreamTable";
 
-const UNIT_RESULT_UNITS: Record<string, string> = {
-  duty: "W", temperature: "K", pressure: "Pa", pressure_drop: "Pa", vapor_fraction: "–",
-};
+/** Digits by unit: whole watts and pascals, 2 for kelvin, 4 otherwise. */
+const DIGITS: Record<string, number> = { W: 0, Pa: 0, K: 2, "W/K": 1, "mol/s": 4 };
 
 /** Step 5: stream table, unit results and messages of the last run. */
 export function ResultsPage() {
@@ -63,10 +62,12 @@ export function ResultsPage() {
                         {Object.entries(values).map(([name, q]) => (
                           <div key={name} className="contents">
                             <dt className="text-muted">
-                              {name.startsWith("split_") ? t("flowsheet.split_to", { port: t(`flowsheet.ports.${name.slice(6)}`) }) : t(`flowsheet.specs.${name}`, { defaultValue: name })}
+                              {name.startsWith("split_") ? t("flowsheet.split_to", { port: t(`flowsheet.ports.${name.slice(6)}`) })
+                                : name.startsWith("extent_") ? t("flowsheet.extent_n", { n: name.slice(7) })
+                                : t(`flowsheet.specs.${name}`, { defaultValue: name })}
                             </dt>
-                            <dd className="num text-right">{formatNumber(q.value, lang, name === "duty" ? 0 : name.includes("pressure") ? 0 : name === "temperature" ? 2 : 4)}</dd>
-                            <dd className="num text-xs leading-5 text-muted">{UNIT_RESULT_UNITS[name] ?? "–"}</dd>
+                            <dd className="num text-right">{formatNumber(q.value, lang, DIGITS[q.unit] ?? (name.endsWith("stages") || name === "feed_stage" ? 1 : 4))}</dd>
+                            <dd className="num text-xs leading-5 text-muted">{q.unit === "1" ? "–" : q.unit}</dd>
                           </div>
                         ))}
                       </dl>

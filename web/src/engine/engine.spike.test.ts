@@ -72,6 +72,11 @@ describe.skipIf(!DIST || !WHEEL_DIR)("engine in Pyodide (T03 spike)", () => {
     const secondMs = Math.round(performance.now() - t1);
 
     expect(first.converged).toBe(true);
+    // Every example (pumps, columns, reactors, recycle loops) also solves in Pyodide.
+    for (const f of readdirSync(join(ROOT, "examples")).filter((n) => n.endsWith(".opd.json"))) {
+      const r = engine.simulate(JSON.parse(readFileSync(join(ROOT, "examples", f), "utf-8")));
+      expect(r.converged, f).toBe(true);
+    }
     const vapor = (first.document.results as any).streams.S2;
     expect(vapor.mole_fractions.benzene).toBeGreaterThan(0.5);
 

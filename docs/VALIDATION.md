@@ -31,6 +31,10 @@ the HDA process against the maintainer's CHEMCAD case, plus two or three literat
 | HX zones, desuperheat–condense–subcool | Grid independence (1 zone + phase boundaries vs 100 zones) | UA | 0.2 % | `test_phase_change_zoned_ua_is_grid_independent…` |
 | HX internal pinch | Hand balance at the steam dew point, ideal-gas cp of steam and N2 (NIST Shomate) | minimum approach | 0.3 K | `test_internal_pinch_at_dew_point_matches_hand_balance` |
 | HX rating with phase change | Rated UA reproduces the design duty | duty | 1e-6 rel. | `test_rating_reproduces_phase_change_design` |
+| Shell-and-tube, tube side | Hand calculation, Dittus–Boelter + OU friction/return-loss model, NIST water at 300 K | v, Re, h_t, ΔP_t | 0.5 %, 1 %, 3 %, 1 % | `test_shell_and_tube.py::test_tube_side…` |
+| Shell-and-tube, shell side | Hand calculation, Kern (1950) D_e, h_s and ΔP_s, NIST water at 300 K | v, Re, h_s, ΔP_s | 0.5 %, 1 %, 3 %, 1 % | `test_shell_side…` |
+| F correction (1–2N) | Bowman et al. (1940): R = 1, P = 0.5 → 0.802; reciprocity F(R,P) = F(1/R, PR) | F | 5e-4 | `test_f_correction_reference_values` |
+| Geometry rating | U·A·F equals the zoned UA; design check at the rated outlet gives zero over-design | UA, over-design | 1e-5 | `test_rating_from_geometry…` |
 | Conversion reactor | ΔHr° of toluene HDA from formation enthalpies (≈ −42 kJ/mol) | duty | 2 % | `test_conversion_reactor…` |
 | Shortcut column | Closed-form binary Fenske and Underwood | N_min, R_min | 1e-9, 1e-4 rel. | `test_shortcut_column_binary…` |
 | Rigorous column | MESH equations on every stage; FUG design | residuals; recovery, x_D, Q_c | 1e-6; 0.03, 0.02, 5 % | `test_distillation_column.py` |

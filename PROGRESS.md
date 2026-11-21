@@ -151,3 +151,9 @@ Template:
 - Tests: engine 148 passed (new `test_liquid_equilibrium.py`); web 55 passed.
 - PR: agent/T23-liquid-equilibrium.
 - Next: T24 shell-and-tube geometry.
+
+## 2026-11-21 — Claude (manual session) — T24
+- Done: shell-and-tube geometry (Kern) in the engine, rating and design-check modes, F factor, computed pressure drops, warnings (two-phase side, low F), UI geometry editor with new unit kinds (length, diameter, area, U, fouling, velocity, conductivity), example `toluene-cooler-shell-and-tube`, D030, VALIDATION rows, user guide.
+- Tests: engine 161 passed (new `test_shell_and_tube.py`); web 56 passed.
+- PR: agent/T24-shell-and-tube (stacked on T23).
+- Next: T25/T26 literature validation cases.

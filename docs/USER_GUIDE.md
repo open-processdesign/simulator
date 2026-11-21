@@ -40,4 +40,6 @@ Feed, product, mixer, splitter, flash, heater/cooler, heat exchanger, valve, pum
 
 **Equilibrium reactor.** Choose the reacting phase (gas or liquid). K comes from formation data, or from your own correlation ln K = a + b/T + c·ln T (e.g. from a paper). In the liquid phase, activities are x·γ against the pure liquid; use NRTL or UNIQUAC for polar mixtures. Example: *MTBE synthesis*.
 
+**Shell-and-tube geometry.** In the heat exchanger's side panel, switch on *Shell-and-tube geometry* and enter tubes, passes, pitch, shell diameter, baffle spacing and fouling. Kern's method gives the film coefficients, U, area and both pressure drops (applied to the outlets unless you give them). Leave the thermal specification empty to rate the exchanger; give an outlet temperature or duty to see the over-design. Example: *Toluene cooler*.
+
 **Heat exchanger zones.** The exchanger splits its duty into zones (default 10, side panel → *Zone analysis*) and adds a zone boundary at every bubble or dew point inside it. UA is the sum over the zones, the *minimum approach* is the internal pinch, and the Results page draws the T–Q heat curves. A temperature cross inside the exchanger is reported even when both ends look fine. Example: *Steam-heated vaporizer*.

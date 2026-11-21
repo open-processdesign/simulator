@@ -51,6 +51,9 @@ cstr, pfr  in, out                volume (m³); exactly one of temperature, duty
                                   optional pressure *or* pressure_drop; options.phase
                                   ("gas" | "liquid"), options.reactions = [{stoichiometry,
                                   k0, Ea (J/mol), orders: {component: n}}] (kinetics.py)
+equilib-   in, out                exactly one of temperature, duty; optional pressure *or*
+rium_                             pressure_drop; options.reactions = [{stoichiometry}];
+reactor                           gas-phase chemical equilibrium (equilibrium.py, T18)
 =========  =====================  ==========================================================
 
 Duty is heat added to the process stream (W): positive for heating, negative for cooling.
@@ -84,12 +87,14 @@ from .. import adapter as _adapter
 from ..adapter import Capabilities, Issue, OPDDocument, Severity, SimulationResult, Target
 from ..models import Flowsheet, Stream, Unit, check_references, load
 from .column import ColumnError, solve_column
+from .equilibrium import EquilibriumError, ln_k, solve_adiabatic, solve_equilibrium
 from .kinetics import KineticsError, parse_rate_laws, solve_cstr, solve_pfr
 from .recycle import Accelerator, Block, Edge, solve_plan
 
 UNIT_TYPES = frozenset({"feed", "product", "mixer", "splitter", "heater", "valve", "flash",
                         "pump", "compressor", "heat_exchanger", "conversion_reactor",
-                        "shortcut_column", "distillation_column", "cstr", "pfr"})
+                        "shortcut_column", "distillation_column", "cstr", "pfr",
+                        "equilibrium_reactor"})
 THERMO_PACKAGES = frozenset({"IDEAL", "PR", "SRK", "NRTL"})
 
 # SI unit strings accepted per spec name (v0.1 stores SI only).
@@ -775,6 +780,25 @@ def _check_unit(u: Unit, ins: dict[str, str], outs: dict[str, str],
         if u.options.get("phase", "gas") not in ("gas", "liquid"):
             issues.append(_error("invalid_option", "unit", u.id, target=u.id, option="phase"))
         issues += _check_kinetics(u, comp_ids or [])
+    elif t == "equilibrium_reactor":
+        need("in", ins)
+        need("out", outs)
+        no_extra({"in"}, ins)
+        no_extra({"out"}, outs)
+        issues += _one_of(u, ("temperature", "duty"), required=True)
+        issues += _one_of(u, ("pressure", "pressure_drop"), required=False)
+        reactions = u.options.get("reactions")
+        if not isinstance(reactions, list) or not reactions:
+            issues.append(_missing("unit", u.id, "reactions"))
+        else:
+            for k, r in enumerate(reactions, start=1):
+                stoich = r.get("stoichiometry") if isinstance(r, dict) else None
+                if not isinstance(stoich, dict) or not stoich:
+                    issues.append(_error("invalid_reaction", "unit", u.id, target=u.id, reaction=k))
+                    continue
+                unknown = sorted(c for c in stoich if c not in (comp_ids or []))
+                if unknown:
+                    issues.append(_error("unknown_component", "unit", u.id, target=u.id, components=unknown))
     elif t == "distillation_column":
         need("in", ins)
         for p in ("distillate", "bottoms"):
@@ -1298,6 +1322,62 @@ def _solve_kinetic_reactor(u, inlets, outs, th, fs):
     return {"out": out}, results
 
 
+def _solve_equilibrium_reactor(u, inlets, outs, th, fs):
+    """Gas-phase chemical equilibrium (see equilibrium.py)."""
+    feed = inlets["in"]
+    P = _outlet_pressure(u, feed.P)
+    _require_positive_pressure(u, P)
+    if feed.F <= _ZERO_FLOW:
+        return {"out": _empty(feed.T, P)}, {"duty": _q(0.0, "W")}
+    index = {cid: k for k, cid in enumerate(th.ids)}
+    mws = th.constants.MWs
+    nus = []
+    for k, r in enumerate(u.options["reactions"], start=1):
+        nu = [0.0] * len(th.ids)
+        for c, v in r["stoichiometry"].items():
+            nu[index[c]] = float(v)
+        if abs(sum(n * w for n, w in zip(nu, mws))) > 1e-3 * sum(abs(n) * w for n, w in zip(nu, mws)):
+            raise _InputError(_error("unbalanced_reaction", "unit", u.id, target=u.id, reaction=k,
+                                     imbalance=round(sum(n * w for n, w in zip(nu, mws)), 4)))
+        nus.append(nu)
+    flows_in = [feed.F * z for z in feed.zs]  # type: ignore[union-attr]
+    H_in = feed.F * (feed.H + th.Hf(feed.zs))  # type: ignore[arg-type, operator]
+
+    def outlet(T: float) -> tuple[list[float], _State]:
+        xi = solve_equilibrium(th, nus, flows_in, P, T)
+        flows = [max(f + sum(nu[i] * x for nu, x in zip(nus, xi)), 0.0) for i, f in enumerate(flows_in)]
+        F = sum(flows)
+        zs = [f / F for f in flows]
+        return xi, _scaled(th.flash(zs, T=T, P=P), F)
+
+    try:
+        if "temperature" in u.specs:
+            T = u.specs["temperature"].value
+        else:
+            Q = u.specs["duty"].value
+
+            def energy(T: float) -> float:
+                _, out = outlet(T)
+                return out.F * (out.H + th.Hf(out.zs)) - H_in - Q  # type: ignore[operator, arg-type]
+
+            T = solve_adiabatic(energy, feed.T)
+        xi, out = outlet(T)
+    except EquilibriumError as exc:
+        raise _InputError(_error(exc.code, "unit", u.id, target=u.id, **exc.params)) from exc
+    duty = out.F * (out.H + th.Hf(out.zs)) - H_in  # type: ignore[operator, arg-type]
+    results: dict[str, Any] = {}
+    for k, (x, nu) in enumerate(zip(xi, nus), start=1):
+        results[f"extent_{k}"] = _q(x, "mol/s")
+        results[f"equilibrium_constant_{k}"] = _q(math.exp(ln_k(th, nu, T)), "1")
+    results.update({
+        "duty": _q(duty, "W"),
+        "temperature": _q(T, "K"),
+        "pressure": _q(P, "Pa"),
+        "vapor_fraction": _q(out.VF, "1"),
+    })
+    return {"out": out}, results
+
+
 def _solve_distillation_column(u, inlets, outs, th, fs):
     """Rigorous column by the bubble-point method (see column.py)."""
     feed = inlets["in"]
@@ -1343,6 +1423,7 @@ def _solve_distillation_column(u, inlets, outs, th, fs):
 _SOLVERS: dict[str, Solver] = {
     "distillation_column": _solve_distillation_column,
     "cstr": _solve_kinetic_reactor,
+    "equilibrium_reactor": _solve_equilibrium_reactor,
     "pfr": _solve_kinetic_reactor,
     "pump": _solve_pump,
     "compressor": _solve_compressor,

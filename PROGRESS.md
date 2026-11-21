@@ -118,3 +118,8 @@ Template:
 - Done: `engine/opd_engine/adapters/kinetics.py` (power-law rates, CSTR and PFR solvers), `cstr`/`pfr` units in engine, schema, models and UI (palette, rate-law editor with phase, k₀, Eₐ, orders; volume/time/energy unit kinds), PFR length profiles reuse the profile charts (now generic axis), example `ethane-cracking-pfr.opd.json`. Fixes: chart x-scale for small ranges, non-overlapping end labels, exponent display for very large/small inputs.
 - Tests: engine 105 passed — first-order CSTR and PFR vs. closed form at three volumes, second-order CSTR vs. its quadratic, Arrhenius dependence, adiabatic PFR outlet T equals the adiabatic conversion reactor at the same conversion, monotonic exothermic profile, input errors. Web 51 passed. Rendered in Chrome in metric units.
 - PR: #18 (based on PR #17).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T18
+- Done: `engine/opd_engine/adapters/equilibrium.py`, `equilibrium_reactor` unit in engine, schema, models and UI (reaction editor, EN/TR), example `water-gas-shift-equilibrium.opd.json`.
+- Tests: engine 116 passed — WGS K(T) vs. Moe correlation (600–800 K, within 6 %), K = 1 between 1050 and 1150 K, outlet satisfies K and element balances, WGS pressure-independent, ammonia yield rises with pressure, adiabatic outlet in equilibrium at its own T with zero duty, two simultaneous reactions (SMR + WGS) both at equilibrium. Web 51 passed; all examples solve in Pyodide.
+- PR: #19 (based on PR #18).

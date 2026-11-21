@@ -1,6 +1,6 @@
 import {
   ArrowLeftRight, ArrowRightFromLine, Columns4, ArrowRightToLine, Columns3, Cylinder, Fan, Flame,
-  FlaskConical, FlaskRound, Gauge, MoveRight, Merge, Split, Waves, type LucideIcon,
+  FlaskConical, FlaskRound, Gauge, MoveRight, Scale, Merge, Split, Waves, type LucideIcon,
 } from "lucide-react";
 import type { Category } from "./catalog";
 
@@ -18,6 +18,7 @@ export const UNIT_ICONS: Record<string, LucideIcon> = {
   conversion_reactor: FlaskConical,
   cstr: FlaskRound,
   pfr: MoveRight,
+  equilibrium_reactor: Scale,
   shortcut_column: Columns3,
   distillation_column: Columns4,
 };

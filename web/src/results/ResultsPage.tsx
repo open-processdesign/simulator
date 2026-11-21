@@ -90,6 +90,7 @@ export function ResultsPage() {
                             <dt className="text-muted">
                               {name.startsWith("split_") ? t("flowsheet.split_to", { port: t(`flowsheet.ports.${name.slice(6)}`) })
                                 : name.startsWith("extent_") ? t("flowsheet.extent_n", { n: name.slice(7) })
+                                : name.startsWith("equilibrium_constant_") ? `${t("flowsheet.specs.equilibrium_constant")} ${name.slice(21)}`
                                 : t(`flowsheet.specs.${name}`, { defaultValue: name })}
                             </dt>
                             <dd className="num text-right">{formatNumber(units.toDisplay(name, q.value), lang, units.digits(name))}</dd>

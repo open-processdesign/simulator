@@ -1,0 +1,204 @@
+{
+  "format": "opd-flowsheet",
+  "version": "0.1",
+  "name": "Water-gas shift at equilibrium",
+  "description": "High-temperature shift CO + H2O ⇌ CO2 + H2 in an adiabatic equilibrium reactor, then cooled; K(T) from formation data. Teaching case.",
+  "components": [
+    {
+      "id": "co",
+      "name": "carbon monoxide",
+      "cas": "630-08-0",
+      "formula": "CO"
+    },
+    {
+      "id": "h2o",
+      "name": "water",
+      "cas": "7732-18-5",
+      "formula": "H2O"
+    },
+    {
+      "id": "co2",
+      "name": "carbon dioxide",
+      "cas": "124-38-9",
+      "formula": "CO2"
+    },
+    {
+      "id": "h2",
+      "name": "hydrogen",
+      "cas": "1333-74-0",
+      "formula": "H2"
+    }
+  ],
+  "thermo": {
+    "package": "PR"
+  },
+  "units": [
+    {
+      "id": "FEED-1",
+      "type": "feed",
+      "label": "Syngas + steam"
+    },
+    {
+      "id": "R-1",
+      "type": "equilibrium_reactor",
+      "label": "HT shift",
+      "specs": {
+        "duty": {
+          "value": 0.0,
+          "unit": "W"
+        }
+      },
+      "options": {
+        "reactions": [
+          {
+            "stoichiometry": {
+              "co": -1,
+              "h2o": -1,
+              "co2": 1,
+              "h2": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "H-1",
+      "type": "heater",
+      "label": "Cooler",
+      "specs": {
+        "temperature": {
+          "value": 313.15,
+          "unit": "K"
+        }
+      }
+    },
+    {
+      "id": "F-1",
+      "type": "flash",
+      "label": "Knock-out drum",
+      "specs": {
+        "pressure_drop": {
+          "value": 0,
+          "unit": "Pa"
+        },
+        "duty": {
+          "value": 0,
+          "unit": "W"
+        }
+      }
+    },
+    {
+      "id": "PROD-1",
+      "type": "product",
+      "label": "Shifted gas"
+    },
+    {
+      "id": "PROD-2",
+      "type": "product",
+      "label": "Condensate"
+    }
+  ],
+  "streams": [
+    {
+      "id": "S1",
+      "from": {
+        "unit": "FEED-1",
+        "port": "out"
+      },
+      "to": {
+        "unit": "R-1",
+        "port": "in"
+      },
+      "state": {
+        "temperature": {
+          "value": 623.15,
+          "unit": "K"
+        },
+        "pressure": {
+          "value": 2500000.0,
+          "unit": "Pa"
+        },
+        "molar_flow": {
+          "value": 100.0,
+          "unit": "mol/s"
+        },
+        "mole_fractions": {
+          "co": 0.15,
+          "h2o": 0.35,
+          "co2": 0.1,
+          "h2": 0.4
+        }
+      }
+    },
+    {
+      "id": "S2",
+      "from": {
+        "unit": "R-1",
+        "port": "out"
+      },
+      "to": {
+        "unit": "H-1",
+        "port": "in"
+      }
+    },
+    {
+      "id": "S3",
+      "from": {
+        "unit": "H-1",
+        "port": "out"
+      },
+      "to": {
+        "unit": "F-1",
+        "port": "in"
+      }
+    },
+    {
+      "id": "S4",
+      "from": {
+        "unit": "F-1",
+        "port": "vapor"
+      },
+      "to": {
+        "unit": "PROD-1",
+        "port": "in"
+      }
+    },
+    {
+      "id": "S5",
+      "from": {
+        "unit": "F-1",
+        "port": "liquid"
+      },
+      "to": {
+        "unit": "PROD-2",
+        "port": "in"
+      }
+    }
+  ],
+  "layout": {
+    "FEED-1": {
+      "x": 0,
+      "y": 100
+    },
+    "R-1": {
+      "x": 180,
+      "y": 100
+    },
+    "H-1": {
+      "x": 360,
+      "y": 100
+    },
+    "F-1": {
+      "x": 540,
+      "y": 100
+    },
+    "PROD-1": {
+      "x": 720,
+      "y": 20
+    },
+    "PROD-2": {
+      "x": 720,
+      "y": 200
+    }
+  }
+}

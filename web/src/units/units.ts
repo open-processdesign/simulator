@@ -80,6 +80,7 @@ const KIND_BY_NAME: Record<string, Kind> = {
 /** Kind of a spec, state field or result by its OPD name (unknown names are dimensionless). */
 export function kindOf(name: string): Kind {
   if (name.startsWith("extent_")) return "molar_flow";
+  if (name.startsWith("equilibrium_constant_")) return "number";
   return KIND_BY_NAME[name] ?? "fraction";
 }
 

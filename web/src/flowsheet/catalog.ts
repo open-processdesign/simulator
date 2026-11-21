@@ -57,6 +57,8 @@ export const UNITS: UnitDef[] = [
     groups: [{ key: "volume", options: ["volume"] }, { key: "reactor_thermal", options: ["temperature", "duty"] }, PRESSURE_OPTIONAL], available: true },
   { type: "pfr", category: "reaction", prefix: "R", inlets: ["in"], outlets: ["out"],
     groups: [{ key: "volume", options: ["volume"] }, { key: "reactor_thermal", options: ["temperature", "duty"] }, PRESSURE_OPTIONAL], available: true },
+  { type: "equilibrium_reactor", category: "reaction", prefix: "R", inlets: ["in"], outlets: ["out"],
+    groups: [{ key: "reactor_thermal", options: ["temperature", "duty"] }, PRESSURE_OPTIONAL], available: true },
   { type: "distillation_column", category: "separation", prefix: "T", inlets: ["in"], outlets: ["distillate", "bottoms"],
     groups: [
       { key: "number_of_stages", options: ["number_of_stages"] },

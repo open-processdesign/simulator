@@ -75,6 +75,7 @@ function UnitPanel({ unit, issues, onDeleted }: { unit: Unit; issues: EngineIssu
       {unit.type === "conversion_reactor" && <ReactionsEditor unit={unit} />}
       {unit.type === "shortcut_column" && <KeysEditor unit={unit} />}
       {(unit.type === "cstr" || unit.type === "pfr") && <KineticsEditor unit={unit} />}
+      {unit.type === "equilibrium_reactor" && <EquilibriumEditor unit={unit} />}
 
       {own && (
         <section className="flex flex-col gap-1">
@@ -396,6 +397,43 @@ function KineticsEditor({ unit }: { unit: Unit }) {
         </div>
       ))}
       <Button variant="secondary" size="sm" onClick={() => save([...reactions, { stoichiometry: {}, k0: 1, Ea: 0, orders: {} }])}>
+        {t("flowsheet.add_reaction")}
+      </Button>
+    </fieldset>
+  );
+}
+
+function EquilibriumEditor({ unit }: { unit: Unit }) {
+  const { t } = useTranslation();
+  const { doc, dispatch } = useFlowsheet();
+  const reactions = (unit.options?.reactions as { stoichiometry: Record<string, number> }[] | undefined) ?? [];
+  const save = (next: { stoichiometry: Record<string, number> }[]) => dispatch({ type: "set_options", id: unit.id, options: { reactions: next } });
+  if (doc.components.length === 0) return <p className="text-sm text-muted">{t("flowsheet.no_components")}</p>;
+  return (
+    <fieldset className="flex flex-col gap-3 rounded-md border border-border bg-surface p-3">
+      <legend className="px-1 text-sm font-semibold">{t("flowsheet.specs.reactions")}</legend>
+      <p className="text-xs text-muted">{t("flowsheet.equilibrium_hint")}</p>
+      {reactions.map((r, k) => (
+        <div key={k} className="flex flex-col gap-1.5 border-t border-border pt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">{t("flowsheet.reaction_n", { n: k + 1 })}</span>
+            <Button variant="ghost" size="sm" aria-label={t("flowsheet.remove_reaction", { n: k + 1 })}
+              onClick={() => save(reactions.filter((_, i) => i !== k))}>
+              <Trash2 aria-hidden />
+            </Button>
+          </div>
+          {doc.components.map((c) => (
+            <QuantityField key={c.id} label={`ν ${c.name}`} name="number" value={r.stoichiometry[c.id]}
+              onCommit={(v) => {
+                const st = { ...r.stoichiometry };
+                if (v === null || v === 0) delete st[c.id];
+                else st[c.id] = v;
+                save(reactions.map((x, i) => (i === k ? { stoichiometry: st } : x)));
+              }} />
+          ))}
+        </div>
+      ))}
+      <Button variant="secondary" size="sm" onClick={() => save([...reactions, { stoichiometry: {} }])}>
         {t("flowsheet.add_reaction")}
       </Button>
     </fieldset>

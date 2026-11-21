@@ -35,14 +35,14 @@ describe("flowsheet page", () => {
     await i18n.changeLanguage("en");
   });
 
-  it("adds units from the palette and shows unsupported ones as coming later", async () => {
+  it("adds units from the palette", async () => {
     const user = userEvent.setup();
     renderWithApp(<><FlowsheetPage /><DocProbe /></>);
     const palette = screen.getByRole("complementary", { name: "Units" });
     await user.click(within(palette).getByRole("button", { name: /^Feed$/ }));
     await user.click(within(palette).getByRole("button", { name: /^Flash$/ }));
     expect(currentDoc().units.map((u) => u.id)).toEqual(["FEED-1", "F-1"]);
-    expect(within(palette).getByRole("button", { name: /Pump/ })).toBeDisabled();
+    expect(within(palette).getByRole("button", { name: /Pump/ })).toBeEnabled();
     await waitFor(() => expect(screen.getByText("F-1")).toBeInTheDocument());
   });
 });
@@ -101,5 +101,47 @@ describe("side panel", () => {
     renderWithApp(<SidePanel selection={{ kind: "unit", id: "SP-1" }} issues={[]} onDeleted={() => {}} />, flashDrum());
     expect(screen.getByText("Connect at least two outlets.")).toBeInTheDocument();
     expect(screen.getByText("Nothing missing.")).toBeInTheDocument();
+  });
+});
+
+describe("reactor and column editors", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  const hda = (): Flowsheet => ({
+    ...emptyFlowsheet("t"),
+    components: [
+      { id: "toluene", name: "toluene", cas: "108-88-3" }, { id: "hydrogen", name: "hydrogen", cas: "1333-74-0" },
+      { id: "benzene", name: "benzene", cas: "71-43-2" }, { id: "methane", name: "methane", cas: "74-82-8" },
+    ],
+    units: [{ id: "R-1", type: "conversion_reactor" }, { id: "T-1", type: "shortcut_column" }],
+    streams: [],
+  });
+
+  it("edits reactions: stoichiometry, key and conversion", async () => {
+    const user = userEvent.setup();
+    renderWithApp(<><SidePanel selection={{ kind: "unit", id: "R-1" }} issues={null} onDeleted={() => {}} /><DocProbe /></>, hda());
+    await user.click(screen.getByRole("button", { name: "Add reaction" }));
+    const box = screen.getByRole("group", { name: "Reactions" });
+    for (const [name, v] of [["toluene", "-1"], ["hydrogen", "-1"], ["benzene", "1"], ["methane", "1"]]) {
+      await user.type(within(box).getByRole("textbox", { name: `ν ${name}` }), `${v}{Enter}`);
+    }
+    await user.selectOptions(within(box).getByRole("combobox", { name: "Key component" }), "toluene");
+    const conv = within(box).getByRole("textbox", { name: "Conversion of key" });
+    await user.clear(conv);
+    await user.type(conv, "0,75{Enter}");
+    expect(currentDoc().units[0].options).toEqual({ reactions: [{
+      stoichiometry: { toluene: -1, hydrogen: -1, benzene: 1, methane: 1 }, key: "toluene", conversion: 0.75 }] });
+    await user.click(within(box).getByRole("button", { name: "Remove reaction 1" }));
+    expect(currentDoc().units[0].options).toEqual({ reactions: [] });
+  });
+
+  it("sets the column key components", async () => {
+    const user = userEvent.setup();
+    renderWithApp(<><SidePanel selection={{ kind: "unit", id: "T-1" }} issues={null} onDeleted={() => {}} /><DocProbe /></>, hda());
+    await user.selectOptions(screen.getByRole("combobox", { name: "Light key" }), "benzene");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Heavy key" }), "toluene");
+    expect(currentDoc().units[1].options).toEqual({ light_key: "benzene", heavy_key: "toluene" });
   });
 });

@@ -319,10 +319,10 @@ def test_unconnected_port_and_missing_feed_data():
     assert codes(doc) == ["missing_spec"]
 
 
-def test_unsupported_unit_and_package():
+def test_unsupported_package_and_wrong_ports():
     doc = copy.deepcopy(FLASH_DRUM)
-    doc["units"][1]["type"] = "pump"
-    assert codes(doc) == ["unsupported_unit"]
+    doc["units"][1]["type"] = "pump"  # a pump has ports in/out, not vapor/liquid
+    assert set(codes(doc)) == {"unconnected_port", "unknown_port"}
     doc = copy.deepcopy(FLASH_DRUM)
     doc["thermo"]["package"] = "NRTL"
     assert codes(doc) == ["unsupported_thermo"]

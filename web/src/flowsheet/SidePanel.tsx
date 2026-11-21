@@ -72,6 +72,8 @@ function UnitPanel({ unit, issues, onDeleted }: { unit: Unit; issues: EngineIssu
       {def?.groups.map((g) => <SpecGroupEditor key={`${unit.id}-${g.key}`} unit={unit} group={g} />)}
       {unit.type === "splitter" && <SplitterEditor unit={unit} />}
       {unit.type === "feed" && <FeedEditor unit={unit} />}
+      {unit.type === "conversion_reactor" && <ReactionsEditor unit={unit} />}
+      {unit.type === "shortcut_column" && <KeysEditor unit={unit} />}
 
       {own && (
         <section className="flex flex-col gap-1">
@@ -123,7 +125,7 @@ function SpecGroupEditor({ unit, group }: { unit: Unit; group: SpecGroup }) {
             <label className="flex items-center gap-1 text-sm">
               <input type="radio" checked={active === ""} className="accent-[var(--opd-accent)]"
                 onChange={() => { setChoice(""); if (given) dispatch({ type: "set_spec", id: unit.id, name: given, quantity: null }); }} />
-              {group.key === "mixer_pressure" ? t("flowsheet.lowest_inlet") : t("flowsheet.none")}
+              {t(`flowsheet.none_label.${group.key}`, { defaultValue: t("flowsheet.none") })}
             </label>
           )}
           {group.options.map((o) => (
@@ -265,5 +267,79 @@ function StreamPanel({ stream, onDeleted }: { stream: Stream; onDeleted: () => v
       </header>
       {source?.type === "feed" ? <FeedStreamEditor stream={stream} doc={doc} /> : <p className="text-sm text-muted">{t("flowsheet.calculated")}</p>}
     </>
+  );
+}
+
+type Reaction = { stoichiometry: Record<string, number>; key: string; conversion: number };
+
+function ReactionsEditor({ unit }: { unit: Unit }) {
+  const { t } = useTranslation();
+  const { doc, dispatch } = useFlowsheet();
+  const reactions = (unit.options?.reactions as Reaction[] | undefined) ?? [];
+  const save = (next: Reaction[]) => dispatch({ type: "set_options", id: unit.id, options: { reactions: next } });
+  const update = (k: number, patch: Partial<Reaction>) => save(reactions.map((r, i) => (i === k ? { ...r, ...patch } : r)));
+
+  if (doc.components.length === 0) return <p className="text-sm text-muted">{t("flowsheet.no_components")}</p>;
+  return (
+    <fieldset className="flex flex-col gap-3 rounded-md border border-border bg-surface p-3">
+      <legend className="px-1 text-sm font-semibold">{t("flowsheet.specs.reactions")}</legend>
+      {reactions.map((r, k) => (
+        <div key={k} className="flex flex-col gap-1.5 border-b border-border pb-3 last:border-0 last:pb-0">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">{t("flowsheet.reaction_n", { n: k + 1 })}</span>
+            <Button variant="ghost" size="sm" aria-label={t("flowsheet.remove_reaction", { n: k + 1 })}
+              onClick={() => save(reactions.filter((_, i) => i !== k))}>
+              <Trash2 aria-hidden />
+            </Button>
+          </div>
+          <p className="text-xs text-muted">{t("flowsheet.stoich_hint")}</p>
+          {doc.components.map((c) => (
+            <QuantityField key={c.id} label={`ν ${c.name}`} unit="1" value={r.stoichiometry[c.id]}
+              onCommit={(v) => {
+                const stoich = { ...r.stoichiometry };
+                if (v === null || v === 0) delete stoich[c.id];
+                else stoich[c.id] = v;
+                update(k, { stoichiometry: stoich });
+              }} />
+          ))}
+          <label className="flex items-center justify-between gap-2 text-sm text-muted">
+            {t("flowsheet.key_component")}
+            <select value={r.key} onChange={(e) => update(k, { key: e.target.value })}
+              className="h-7 w-[11.5rem] rounded-sm border border-border-strong bg-surface px-2 text-sm text-text">
+              <option value="">–</option>
+              {doc.components.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </label>
+          <QuantityField label={t("flowsheet.conversion")} unit="1" value={r.conversion}
+            onCommit={(v) => update(k, { conversion: v ?? 0 })} />
+        </div>
+      ))}
+      <Button variant="secondary" size="sm" onClick={() => save([...reactions, { stoichiometry: {}, key: "", conversion: 0.5 }])}>
+        {t("flowsheet.add_reaction")}
+      </Button>
+    </fieldset>
+  );
+}
+
+function KeysEditor({ unit }: { unit: Unit }) {
+  const { t } = useTranslation();
+  const { doc, dispatch } = useFlowsheet();
+  if (doc.components.length === 0) return <p className="text-sm text-muted">{t("flowsheet.no_components")}</p>;
+  return (
+    <fieldset className="flex flex-col gap-2 rounded-md border border-border bg-surface p-3">
+      <legend className="px-1 text-sm font-semibold">{t("flowsheet.keys")}</legend>
+      {(["light_key", "heavy_key"] as const).map((key) => (
+        <label key={key} className="flex items-center justify-between gap-2 text-sm text-muted">
+          {t(`flowsheet.specs.${key}`)}
+          <select value={(unit.options?.[key] as string | undefined) ?? ""}
+            onChange={(e) => dispatch({ type: "set_options", id: unit.id, options: { [key]: e.target.value || undefined } })}
+            className="h-7 w-[11.5rem] rounded-sm border border-border-strong bg-surface px-2 text-sm text-text">
+            <option value="">–</option>
+            {doc.components.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </label>
+      ))}
+      <p className="text-xs text-muted">{t("flowsheet.column_note")}</p>
+    </fieldset>
   );
 }

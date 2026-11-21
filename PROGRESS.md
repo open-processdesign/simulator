@@ -69,3 +69,9 @@ Template:
 - Tests: engine 60 passed — plan for simple, nested and self loops; mixer–splitter loop vs. analytic R = rF/(1 − r) (r = 0.5, 0.9); Wegstein ≥ 3× fewer iterations than substitution (20 vs. 160); flash loop with liquid recycle closes component balances and matches the once-through duties; starting estimate used; non-convergence reported on the tear stream. Web 33 passed; engine still loads in Pyodide.
 - PR: #9 (based on PR #8).
 - Next: T09 (more units) and T10 (save/load + deploy).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T09
+- Done: pump, compressor, heat exchanger, conversion reactor and shortcut column (FUG) in the reference engine with validation and EN/TR messages; all units enabled in the palette; side-panel editors for reactions (stoichiometry, key, conversion) and column keys; results show the engine's units. Examples `benzene-toluene-column.opd.json` and `hda-recycle-loop.opd.json`.
+- Tests: engine 75 passed — pump power vs. ṁΔP/(ρη) for water; compressor vs. ideal-gas isentropic relation (N2, 1→3 bar); exchanger duty from both sides, LMTD/UA, temperature cross; HDA heat of reaction vs. formation enthalpies (−42 kJ/mol); shortcut column vs. closed-form binary Fenske and Underwood; all examples solve. Web 35 passed; all examples also solve in Pyodide.
+- PR: #10 (based on PR #9).
+- Next: T10 (save/load, example gallery, deploy).

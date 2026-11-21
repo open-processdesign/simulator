@@ -26,6 +26,13 @@ Template:
 - PR: #2.
 - Next: T01 tonight (web scaffold), then T03 (in-browser engine spike).
 
+## 2026-11-21 — Claude (maintainer-requested session) — T01
+- Done: `web/` scaffold — Vite 8 + React 19 + TS + Tailwind v4 (tokens from `design/tokens.css` via `@theme`) + shadcn/ui setup (`components.json`, `cn`, themed Button). Self-hosted fonts (Fontsource: Geist, Geist Mono, Source Serif 4). i18next with EN/TR + language switch (remembered in localStorage). App shell: top bar, 5-step workflow nav (hash routing), empty step pages, disclaimer footer. Web CI (`.github/workflows/web.yml`).
+- Tests: Vitest 5 passed (steps, navigation, Turkish switch, hash parsing, EN/TR key parity); `npm run build` OK.
+- PR: #3.
+- Note: the 21 Nov night run did nothing — the scheduled task had no GitHub repo attached. Fixed for this session; the scheduled task must be recreated with the repo attached.
+- Next: T03 (in-browser engine spike), building on T02 (PR #2).
+
 ## 2026-11-21 — Claude (maintainer-requested session) — T04
 - Done: `engine/opd_engine/adapters/reference.py` — sequential-modular solver on MIT `thermo` (0.6.1): feed, product, mixer, splitter, heater, valve, flash (PT, PQ, P-VF); IDEAL (Raoult), PR, SRK; k_ij from document → ChemSep table → 0 with warning; validation issues for missing/conflicting/non-SI specs, ports, recycle (until T08), unknown CAS, thermo failures. Registered as engine `reference`. 14 new issue messages in EN/TR. Engine CI now installs `thermo`.
 - Tests: 46 passed. Checks: flash-drum balances; IDEAL flash vs. Raoult + Antoine (Felder & Rousseau, Table B.4) hand calculation; PR/SRK pure-component boiling points vs. NIST WebBook; heater T ⇄ duty round trip; isenthalpic valve; mixer/splitter balances; adiabatic flash; user k_ij; issue codes all translated; result document valid against the JSON Schema.

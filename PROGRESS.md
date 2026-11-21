@@ -63,3 +63,9 @@ Template:
 - Tests: web 33 passed (run → table/units/messages, stale after edit, failed run with links, run page). End-to-end in Chrome with the real engine: flash drum drawn by mouse and run in 32–40 ms; numbers equal native CPython (S2 x_benzene 0.6211, S3 0.4057, F-1 duty 1 653 369 W).
 - PR: #8 (based on PR #7).
 - Next: T08 (recycle loops) or T10 (save/load + deploy).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T08
+- Done: `engine/opd_engine/adapters/recycle.py` (solve plan with strongly connected components and DFS tear streams; bounded Wegstein / substitution accelerator) wired into the reference adapter; convergence and non-convergence messages (EN/TR). `supports_recycle` is now true.
+- Tests: engine 60 passed — plan for simple, nested and self loops; mixer–splitter loop vs. analytic R = rF/(1 − r) (r = 0.5, 0.9); Wegstein ≥ 3× fewer iterations than substitution (20 vs. 160); flash loop with liquid recycle closes component balances and matches the once-through duties; starting estimate used; non-convergence reported on the tear stream. Web 33 passed; engine still loads in Pyodide.
+- PR: #9 (based on PR #8).
+- Next: T09 (more units) and T10 (save/load + deploy).

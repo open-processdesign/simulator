@@ -88,7 +88,7 @@ def test_registered_and_capabilities():
     caps = ENGINE.capabilities()
     assert {"feed", "product", "mixer", "splitter", "heater", "valve", "flash"} <= caps.unit_types
     assert caps.thermo_packages == {"IDEAL", "PR", "SRK"}
-    assert not caps.supports_recycle
+    assert caps.supports_recycle
     assert "thermo" in ENGINE.version()
 
 
@@ -328,21 +328,6 @@ def test_unsupported_unit_and_package():
     assert codes(doc) == ["unsupported_thermo"]
 
 
-def test_recycle_is_reported_until_t08():
-    doc = feed_doc(
-        units=[{"id": "FEED", "type": "feed"}, {"id": "M-1", "type": "mixer"},
-               {"id": "SP-1", "type": "splitter", "specs": {"split_back": q(0.5, "1")}},
-               {"id": "P", "type": "product"}],
-        streams=[
-            bt_feed("S1", "M-1", port="in1"),
-            {"id": "S2", "from": {"unit": "M-1", "port": "out"}, "to": {"unit": "SP-1", "port": "in"}},
-            {"id": "S3", "from": {"unit": "SP-1", "port": "back"}, "to": {"unit": "M-1", "port": "in2"}},
-            {"id": "S4", "from": {"unit": "SP-1", "port": "out"}, "to": {"unit": "P", "port": "in"}},
-        ],
-    )
-    assert set(codes(doc)) == {"recycle_not_supported"}
-
-
 def test_invalid_split_and_bad_document():
     doc = feed_doc(
         units=[{"id": "FEED", "type": "feed"},
@@ -369,7 +354,7 @@ def test_every_issue_code_has_translations():
 
     source = (ROOT / "engine" / "opd_engine" / "adapters" / "reference.py").read_text(encoding="utf-8")
     emitted = set(re.findall(r'_(?:error|issue)\(\s*(?:Severity\.\w+,\s*)?"(\w+)"', source))
-    assert {"missing_spec", "recycle_not_supported", "calculation_failed"} <= emitted
+    assert {"missing_spec", "recycle_converged", "recycle_not_converged", "calculation_failed"} <= emitted
     for lang in ("en", "tr"):
         issues = json.loads((ROOT / "web" / "locales" / f"{lang}.json").read_text(encoding="utf-8"))["issues"]
         assert emitted <= set(issues), (lang, sorted(emitted - set(issues)))

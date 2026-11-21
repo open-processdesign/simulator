@@ -76,6 +76,8 @@
     "out_of_range": "{{target}}: {{spec}} izin verilen aralığın dışında.",
     "recycle_not_supported": "{{target}}: bir geri döngü (recycle) içinde; {{engine}} motoru geri döngüleri henüz desteklemiyor.",
     "calculation_failed": "{{target}}: hesap yakınsamadı ({{detail}}).",
-    "unknown_component_data": "Bir bileşen için özellik verisi bulunamadı ({{detail}})."
+    "unknown_component_data": "Bir bileşen için özellik verisi bulunamadı ({{detail}}).",
+    "recycle_converged": "Geri döngü {{iterations}} iterasyonda yakınsadı (yırtılan akımlar {{streams}}, {{method}}).",
+    "recycle_not_converged": "{{target}}: geri döngü {{iterations}} iterasyonda yakınsamadı (en büyük değişim {{residual}}). Geri döngü ayarlarını kontrol edin veya {{streams}} akımına bir başlangıç tahmini verin."
   }
 }

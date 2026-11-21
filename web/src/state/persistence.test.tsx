@@ -54,7 +54,7 @@ describe("file menu", () => {
     renderWithApp(<><FileMenu /><DocProbe /></>, { ...emptyFlowsheet("Mine"), components: [{ id: "a", name: "a", cas: "71-43-2" }] });
     await user.click(screen.getByRole("button", { name: "File" }));
     const menu = screen.getByRole("menu", { name: "File" });
-    await user.click(within(menu).getByRole("menuitem", { name: /HDA|hydrodealkylation/i }));
+    await user.click(within(menu).getByRole("menuitem", { name: /hydrodealkylation loop/i }));
     expect(confirm).toHaveBeenCalledOnce();
     expect(currentDoc().name).toMatch(/hydrodealkylation/i);
     expect(window.location.hash).toBe("#/flowsheet");

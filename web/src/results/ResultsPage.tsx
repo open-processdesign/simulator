@@ -6,6 +6,10 @@ import { IssueList } from "./IssueList";
 import { RunButton } from "./RunButton";
 import { StreamTable } from "./StreamTable";
 import { useUnits } from "@/units/UnitSetProvider";
+import { Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { fileName } from "@/state/persistence";
+import { downloadText, resultsCsv } from "./csv";
 
 /** Step 5: stream table, unit results and messages of the last run. */
 export function ResultsPage() {
@@ -19,7 +23,29 @@ export function ResultsPage() {
     <div className="mx-auto flex max-w-6xl flex-col gap-5 px-6 py-8">
       <div className="flex items-center justify-between gap-4">
         <h1 className="font-display text-2xl font-medium">{t("pages.results.title")}</h1>
-        <RunButton size="sm" />
+        <div className="flex items-center gap-2">
+          {run.state === "done" && run.results && !stale && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const tr = lang === "tr";
+                const csv = resultsCsv(doc, run.results!, {
+                  separator: tr ? ";" : ",",
+                  decimal: tr ? "," : ".",
+                  label: (k) => t(k),
+                  unit: units.unit,
+                  toDisplay: units.toDisplay,
+                });
+                downloadText(csv, fileName(doc).replace(/\.opd\.json$/, "-results.csv"));
+              }}
+            >
+              <Download aria-hidden />
+              {t("csv.export")}
+            </Button>
+          )}
+          <RunButton size="sm" />
+        </div>
       </div>
 
       {run.state === "idle" && <p className="text-muted">{t("pages.results.empty")}</p>}

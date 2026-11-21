@@ -20,6 +20,7 @@
   "results": {"stream_table": "Akım tablosu", "unit_results": "Ünite sonuçları", "messages": "Mesajlar", "from_to": "Nereden → nereye", "unit_col": "Birim", "converged": "{{engine}} ile {{ms}} ms'de çözüldü.", "not_converged": "Akış şeması çözülemedi. Aşağıdaki mesajları düzeltip yeniden çalıştırın.", "stale": "Bu çalıştırmadan sonra akış şeması değişti. Sonuçları güncellemek için yeniden çalıştırın.", "engine_error": "Motor bir hatayla durdu: {{error}}", "show_on_canvas": "{{id}} göster", "severity": {"error": "Hata", "warning": "Uyarı", "info": "Not"}},
   "run": {"running": "Çalışıyor…", "components": "Bileşenler", "units": "Üniteler", "streams": "Akımlar", "package": "Özellik yöntemi: {{name}}", "fix_first": "Önce şu {{count}} girdiyi tamamlayın:", "ready": "Tüm girdiler tamam. Çalıştırmaya hazır."},
   "file": {"menu": "Dosya", "new": "Yeni", "open": "Aç…", "save": "Dosya olarak kaydet", "examples": "Örnekler", "untitled": "Adsız proses", "confirm_replace": "\"{{name}}\" değiştirilsin mi? Kaydedilmemiş değişiklikler kaybolur.", "error_json": "{{file}} bir JSON dosyası değil.", "error_format": "{{file}} bir Open Process Design akış şeması değil (opd-flowsheet 0.1 biçimi).", "dismiss": "Kapat", "process_name": "Proses adı"},
+  "csv": {"export": "CSV dışa aktar", "quantity": "Büyüklük", "value": "Değer"},
   "steps": {
     "components": "Bileşenler",
     "thermo": "Termodinamik",

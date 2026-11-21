@@ -98,3 +98,8 @@ Template:
 - Done: unit-set selector in the top bar (SI / Metric / English); all inputs, the stream table, unit results and component boiling points convert; storage stays SI. Top bar compacted (visually hidden labels) so it fits at 1366 px.
 - Tests: web 48 passed (round trips and textbook factors, kind mapping, metric input stored as SI, psi display, metric stream table). E2E in Chrome: NRTL methanol–water example in metric units.
 - PR: #14 (based on PR #13).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T14
+- Done: "Export CSV" on the Results step: stream table + unit results in the current unit set, UTF-8 BOM, `,`/`.` in English and `;`/`,` in Turkish (Excel defaults), file `<process>-results.csv`; hidden when results are stale.
+- Tests: web 50 passed (metric values, Turkish separators, quoting).
+- PR: #15 (based on PR #14).

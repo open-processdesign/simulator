@@ -20,6 +20,7 @@
   "results": {"stream_table": "Stream table", "unit_results": "Unit results", "messages": "Messages", "from_to": "From → to", "unit_col": "Unit", "converged": "Solved in {{ms}} ms with {{engine}}.", "not_converged": "The flowsheet could not be solved. Fix the messages below and run again.", "stale": "The flowsheet changed after this run. Run again to update the results.", "engine_error": "The engine stopped with an error: {{error}}", "show_on_canvas": "Show {{id}}", "severity": {"error": "Error", "warning": "Warning", "info": "Note"}},
   "run": {"running": "Running…", "components": "Components", "units": "Units", "streams": "Streams", "package": "Property method: {{name}}", "fix_first": "Complete these {{count}} inputs first:", "ready": "All inputs are complete. Ready to run."},
   "file": {"menu": "File", "new": "New", "open": "Open…", "save": "Save as file", "examples": "Examples", "untitled": "Untitled process", "confirm_replace": "Replace \"{{name}}\"? Unsaved changes will be lost.", "error_json": "{{file}} is not a JSON file.", "error_format": "{{file}} is not an Open Process Design flowsheet (format opd-flowsheet 0.1).", "dismiss": "Close", "process_name": "Process name"},
+  "csv": {"export": "Export CSV", "quantity": "Quantity", "value": "Value"},
   "steps": {
     "components": "Components",
     "thermo": "Thermodynamics",

@@ -51,3 +51,9 @@ Template:
 - Tests: engine 50 passed; web 20 passed; end-to-end in Chrome with the real engine (methane–CO2 k_ij 0.0978 from ChemSep shown as Database, benzene–toluene as Missing).
 - PR: #6 (based on PR #5).
 - Next: T06 (flowsheet canvas).
+
+## 2026-11-21 — Claude (maintainer-requested session) — T06
+- Done: Flowsheet step — palette by category (drag or click; unsupported units disabled), React Flow canvas with unit nodes (category icon, id, label, status dot, port handles), streams by connecting outlet → inlet, delete with Delete/Backspace, positions saved in `layout`. Side panel: label, exclusive spec groups (flash, heater, valve, mixer), splitter fractions, feed conditions (T or VF, P, flow, composition with normalize), stream info, translated engine issues. Engine `validate` entry point + worker message; `useIssues` hook. EN/TR strings.
+- Tests: engine 51 passed; web 30 passed (editing reducer, palette, side panel, issues). End-to-end in Chrome with the real engine: feed → flash → two products drawn by mouse, specs entered, all status dots green.
+- PR: #7 (based on PR #6).
+- Next: T07 (Run + Results).

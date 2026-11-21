@@ -43,6 +43,10 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const { id, doc } = request;
   try {
     const engine = await ready;
+    if (request.type === "validate") {
+      post({ id, type: "validate", issues: engine.validate(doc) });
+      return;
+    }
     if (request.type === "binary_parameters") {
       post({ id, type: "binary_parameters", rows: engine.binaryParameters(doc) });
       return;

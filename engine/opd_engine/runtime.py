@@ -62,3 +62,11 @@ def binary_parameters(doc: dict[str, Any]) -> list[dict[str, Any]]:
 def binary_parameters_json(doc_json: str) -> str:
     return json.dumps(binary_parameters(json.loads(doc_json)))
 
+
+def validate(doc: dict[str, Any], engine: str = "reference") -> list[dict[str, Any]]:
+    """Input checks only (no calculation): fast enough to run on every edit."""
+    return [_issue_dict(i) for i in _load_engine(engine).validate(doc)]
+
+
+def validate_json(doc_json: str, engine: str = "reference") -> str:
+    return json.dumps(validate(json.loads(doc_json), engine))

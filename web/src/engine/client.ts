@@ -1,4 +1,4 @@
-import type { BinaryParameterRow, EngineResult, Timing } from "./bootstrap";
+import type { BinaryParameterRow, EngineIssue, EngineResult, Timing } from "./bootstrap";
 import type { WorkerRequest, WorkerResponse } from "./protocol";
 
 export interface EngineInfo {
@@ -11,6 +11,7 @@ export interface EngineClient {
   ready: Promise<EngineInfo>;
   simulate(doc: unknown): Promise<{ result: EngineResult; ms: number }>;
   binaryParameters(doc: unknown): Promise<BinaryParameterRow[]>;
+  validate(doc: unknown): Promise<EngineIssue[]>;
   onProgress(listener: (step: string) => void): void;
   terminate(): void;
 }
@@ -53,6 +54,9 @@ export function startEngine(): EngineClient {
       case "result":
         settle(msg.id, { result: msg.result, ms: msg.ms });
         break;
+      case "validate":
+        settle(msg.id, msg.issues);
+        break;
       case "binary_parameters":
         settle(msg.id, msg.rows);
         break;
@@ -75,6 +79,7 @@ export function startEngine(): EngineClient {
     onProgress: (listener) => listeners.push(listener),
     simulate: (doc) => call({ type: "simulate", doc }),
     binaryParameters: (doc) => call({ type: "binary_parameters", doc }),
+    validate: (doc) => call({ type: "validate", doc }),
     terminate: () => worker.terminate(),
   };
 }

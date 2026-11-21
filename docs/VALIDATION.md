@@ -27,6 +27,10 @@ the HDA process against the maintainer's CHEMCAD case, plus two or three literat
 | Pump | ṁΔP/(ρη), ρ(water, 298 K) from NIST | power | 2 % | `test_units_t09.py::test_pump_power…` |
 | Compressor | Ideal-gas isentropic relation, N2, γ = 1.4 | outlet T, power | 2 K, 2 % | `test_compressor_matches…` |
 | Heat exchanger | Duty from both sides; LMTD and UA definitions | duty, LMTD | 1e-6 rel. | `test_heat_exchanger…` |
+| HX zones, isothermal condensing side | Classic LMTD is exact for a constant hot temperature | UA | 0.5 % | `test_heat_exchanger_zones.py::test_isothermal_condensing_side_matches_lmtd` |
+| HX zones, desuperheat–condense–subcool | Grid independence (1 zone + phase boundaries vs 100 zones) | UA | 0.2 % | `test_phase_change_zoned_ua_is_grid_independent…` |
+| HX internal pinch | Hand balance at the steam dew point, ideal-gas cp of steam and N2 (NIST Shomate) | minimum approach | 0.3 K | `test_internal_pinch_at_dew_point_matches_hand_balance` |
+| HX rating with phase change | Rated UA reproduces the design duty | duty | 1e-6 rel. | `test_rating_reproduces_phase_change_design` |
 | Conversion reactor | ΔHr° of toluene HDA from formation enthalpies (≈ −42 kJ/mol) | duty | 2 % | `test_conversion_reactor…` |
 | Shortcut column | Closed-form binary Fenske and Underwood | N_min, R_min | 1e-9, 1e-4 rel. | `test_shortcut_column_binary…` |
 | Rigorous column | MESH equations on every stage; FUG design | residuals; recovery, x_D, Q_c | 1e-6; 0.03, 0.02, 5 % | `test_distillation_column.py` |

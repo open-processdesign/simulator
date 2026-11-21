@@ -173,6 +173,8 @@ class _Thermo:
         self.cas = [c.cas for c in fs.components]
         self.package = fs.thermo.package
         self.issues: list[Issue] = []
+        self._fs = fs
+        self._pure: dict[int, _Thermo] = {}
         self.constants, self.props = ChemicalConstantsPackage.from_IDs(self.cas)
         n = len(self.cas)
 
@@ -288,7 +290,16 @@ class _Thermo:
         return self.flash_raw(zs, T=T, P=P).S()
 
     def flash_raw(self, zs: list[float], **spec: float) -> Any:
-        """Run a `thermo` flash for composition `zs` (pure components need no `zs`)."""
+        """Run a `thermo` flash for composition `zs` (pure components need no `zs`).
+
+        A stream with a single non-zero component is flashed with that component's own
+        pure flasher: `thermo` 0.6.1's mixture flasher fails (P–H) or returns a wrong
+        phase (P–VF with PR) for such two-phase states. Phase compositions are mapped back."""
+        if len(zs) > 1:
+            nonzero = [k for k, z in enumerate(zs) if z > 0]
+            if len(nonzero) == 1:
+                return _PureResult(self._pure_thermo(nonzero[0]).flash_raw([1.0], **spec),
+                                   nonzero[0], len(zs))
         kwargs = dict(spec) if len(zs) == 1 else dict(spec, zs=zs)
         try:
             return self.flasher.flash(**kwargs)
@@ -296,6 +307,15 @@ class _Thermo:
             if set(spec) == {"P", "VF"} and 0 < spec["VF"] < 1 and len(zs) > 1:
                 return self._flash_PVF_bisect(zs, spec["P"], spec["VF"])
             raise
+
+    def _pure_thermo(self, k: int) -> "_Thermo":
+        if k not in self._pure:
+            fs = self._fs
+            self._pure[k] = _Thermo(fs.model_copy(update={
+                "components": [fs.components[k]],
+                "thermo": fs.thermo.model_copy(update={"binary_parameters": []}),
+            }))
+        return self._pure[k]
 
     def _flash_PVF_bisect(self, zs: list[float], P: float, VF: float) -> Any:
         """P–VF flash by bisection on T between the bubble and dew points (PT flashes).
@@ -442,6 +462,33 @@ def binary_parameter_table(fs: Flowsheet) -> list[dict[str, Any]]:
                 value, source = (db, "database") if db is not None else (0.0, "missing")
             rows.append({"i": ci.id, "j": cj.id, "name": "kij", "value": value, "source": source})
     return rows
+
+
+class _PurePhase:
+    """A phase of a pure-component flash, with mole fractions over all components."""
+
+    def __init__(self, phase: Any, k: int, n: int) -> None:
+        self._phase = phase
+        self.zs = [1.0 if j == k else 0.0 for j in range(n)]
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._phase, name)
+
+
+class _PureResult:
+    """Pure-component flash result seen as a result for the full component list."""
+
+    def __init__(self, res: Any, k: int, n: int) -> None:
+        self._res = res
+        self.zs = [1.0 if j == k else 0.0 for j in range(n)]
+        gas = getattr(res, "gas", None)
+        liquids = list(getattr(res, "liquids", None) or [])
+        self.gas = _PurePhase(gas, k, n) if gas is not None else None
+        self.liquids = [_PurePhase(p, k, n) for p in liquids]
+        self.liquid0 = self.liquids[0] if self.liquids else None
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._res, name)
 
 
 def _vapor_fraction(res: Any) -> float:
@@ -806,6 +853,9 @@ def _check_unit(u: Unit, ins: dict[str, str], outs: dict[str, str],
             issues.append(_error("conflicting_specs", "unit", u.id, target=u.id, specs=given))
         elif not given:
             issues.append(_missing("unit", u.id, "hot_outlet_temperature / cold_outlet_temperature / duty / ua"))
+        zones = u.options.get("zones", _HX_ZONES)
+        if not isinstance(zones, int) or isinstance(zones, bool) or not 1 <= zones <= 100:
+            issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec="zones", min=1, max=100))
     elif t == "conversion_reactor":
         need("in", ins)
         need("out", outs)
@@ -1161,15 +1211,82 @@ def _solve_compressor(u, inlets, outs, th, fs):
     }
 
 
+_HX_ZONES = 10  # default number of equal-duty zones (options.zones)
+_HX_TABLE = 40  # points of the tabulated heat curves used while rating
+
+
+def _lmtd(a: float, b: float) -> float:
+    return (a - b) / math.log(a / b) if abs(a - b) > 1e-9 * max(a, b) else 0.5 * (a + b)
+
+
+def _zone_ua(qs: list[float], t_hot: list[float], t_cold: list[float]) -> tuple[float, float, int]:
+    """Zoned UA = Σ ΔQ_k / LMTD_k over a counter-current grid (q from the cold end).
+    Returns (UA, minimum approach, index of the pinch); UA = inf if the curves touch or cross."""
+    dts = [h - c for h, c in zip(t_hot, t_cold)]
+    k_min = min(range(len(dts)), key=dts.__getitem__)
+    if dts[k_min] <= 0:
+        return math.inf, dts[k_min], k_min
+    ua = sum((qs[k + 1] - qs[k]) / _lmtd(dts[k], dts[k + 1]) for k in range(len(qs) - 1))
+    return ua, dts[k_min], k_min
+
+
 def _solve_heat_exchanger(u, inlets, outs, th, fs):
-    """Two-stream counter-current exchanger from the energy balance Q = ΔH_hot = −ΔH_cold.
-    Reports end approach temperatures and, if both are positive, LMTD and UA = Q/LMTD."""
+    """Two-stream counter-current exchanger, energy balance Q = ΔH_hot = −ΔH_cold.
+
+    Zone analysis (D028): the duty is split into `options.zones` equal parts, plus extra
+    boundaries at each side's bubble and dew points; each side is flashed at the boundaries
+    (pressure linear in duty), so phase changes inside the exchanger show up in the heat
+    curves. Reports the minimum internal approach (pinch),
+    UA = Σ ΔQ_k/LMTD_k and the T–Q profile. A temperature cross anywhere inside is an
+    error. Rating (given UA or U·A) solves zoned UA(Q) = UA; with one zone this is the
+    classic end-temperature LMTD method."""
     hot, cold = inlets["hot_in"], inlets["cold_in"]
     Ph = hot.P - (u.specs["hot_pressure_drop"].value if "hot_pressure_drop" in u.specs else 0.0)
     Pc = cold.P - (u.specs["cold_pressure_drop"].value if "cold_pressure_drop" in u.specs else 0.0)
     _require_positive_pressure(u, min(Ph, Pc))
     if hot.F <= _ZERO_FLOW or cold.F <= _ZERO_FLOW:
         raise _InputError(_error("hx_empty_side", "unit", u.id, target=u.id))
+    zones = int(u.options.get("zones", _HX_ZONES))
+
+    def outlets(Q: float) -> tuple[_State, _State]:
+        ho = _scaled(th.flash(hot.zs, P=Ph, H=hot.H - Q / hot.F), hot.F)  # type: ignore[arg-type, operator]
+        co = _scaled(th.flash(cold.zs, P=Pc, H=cold.H + Q / cold.F), cold.F)  # type: ignore[arg-type, operator]
+        return ho, co
+
+    def phase_boundaries(side: _State, P_out: float) -> list[float]:
+        """Molar enthalpies at the bubble and dew points (mean pressure) where they exist."""
+        out = []
+        for vf in (0.0, 1.0):
+            try:
+                out.append(th.flash(side.zs, P=0.5 * (side.P + P_out), VF=vf).H)  # type: ignore[arg-type, operator]
+            except Exception:  # noqa: BLE001 — no such point (e.g. supercritical): no extra grid point
+                pass
+        return out
+
+    hot_bounds, cold_bounds = phase_boundaries(hot, Ph), phase_boundaries(cold, Pc)
+
+    def curves(Q: float, ho: _State, co: _State) -> tuple[list[float], list[float], list[float]]:
+        """Grid from the cold end (hot outlet / cold inlet, q = 0) to the hot end (q = Q):
+        N equal zones plus the bubble and dew points of either side that fall inside."""
+        qs = [Q * k / zones for k in range(zones + 1)]
+        extra = [hot.F * (h - (hot.H - Q / hot.F)) for h in hot_bounds]  # type: ignore[operator]
+        extra += [cold.F * (h - cold.H) for h in cold_bounds]  # type: ignore[operator]
+        tol = 1e-6 * Q
+        for x in extra:
+            if tol < x < Q - tol and all(abs(x - y) > tol for y in qs):
+                qs.append(x)
+        qs.sort()
+        t_hot, t_cold = [ho.T], [cold.T]
+        for qk in qs[1:-1]:
+            f = qk / Q
+            t_hot.append(th.flash(hot.zs, P=Ph + (hot.P - Ph) * f,  # type: ignore[arg-type]
+                                  H=hot.H - Q / hot.F + qk / hot.F).T)  # type: ignore[operator]
+            t_cold.append(th.flash(cold.zs, P=cold.P - (cold.P - Pc) * f,  # type: ignore[arg-type]
+                                   H=cold.H + qk / cold.F).T)  # type: ignore[operator]
+        t_hot.append(hot.T)  # type: ignore[arg-type]
+        t_cold.append(co.T)  # type: ignore[arg-type]
+        return qs, t_hot, t_cold  # type: ignore[return-value]
+
     if "hot_outlet_temperature" in u.specs:
         h_out = _scaled(th.flash(hot.zs, T=u.specs["hot_outlet_temperature"].value, P=Ph), hot.F)  # type: ignore[arg-type]
         Q = hot.F * (hot.H - h_out.H)  # type: ignore[operator]
@@ -1180,59 +1297,96 @@ def _solve_heat_exchanger(u, inlets, outs, th, fs):
         h_out = _scaled(th.flash(hot.zs, P=Ph, H=hot.H - Q / hot.F), hot.F)  # type: ignore[arg-type, operator]
     elif "duty" in u.specs:
         Q = u.specs["duty"].value
-        h_out = _scaled(th.flash(hot.zs, P=Ph, H=hot.H - Q / hot.F), hot.F)  # type: ignore[arg-type, operator]
-        c_out = _scaled(th.flash(cold.zs, P=Pc, H=cold.H + Q / cold.F), cold.F)  # type: ignore[arg-type, operator]
+        h_out, c_out = outlets(Q)
     else:
-        # Rating: given UA (or U·A), find Q with Q = UA·LMTD (counter-current, end temperatures).
-        UA = (u.specs["ua"].value if "ua" in u.specs
-              else u.specs["u_overall"].value * u.specs["area"].value)
-        if hot.T <= cold.T:
-            raise _InputError(_error("temperature_cross", "unit", u.id, target=u.id,
-                                     hot_end=round(hot.T - cold.T, 2), cold_end=round(hot.T - cold.T, 2)))
-
-        def outlets(Q: float) -> tuple[_State, _State]:
-            ho = _scaled(th.flash(hot.zs, P=Ph, H=hot.H - Q / hot.F), hot.F)  # type: ignore[arg-type, operator]
-            co = _scaled(th.flash(cold.zs, P=Pc, H=cold.H + Q / cold.F), cold.F)  # type: ignore[arg-type, operator]
-            return ho, co
-
-        def q_max() -> float:
-            # Largest duty without a temperature cross: neither stream passes the other's inlet T.
-            hot_lim = hot.F * (hot.H - th.flash(hot.zs, T=cold.T, P=Ph).H)  # type: ignore[arg-type, operator]
-            cold_lim = cold.F * (th.flash(cold.zs, T=hot.T, P=Pc).H - cold.H)  # type: ignore[arg-type, operator]
-            return min(hot_lim, cold_lim)
-
-        def residual(Q: float) -> float:
-            ho, co = outlets(Q)
-            a, b = hot.T - co.T, ho.T - cold.T
-            if a <= 0 or b <= 0:
-                return Q  # positive: too much duty
-            lmtd = (a - b) / math.log(a / b) if abs(a - b) > 1e-9 * max(a, b) else a
-            return Q - UA * lmtd
-
-        from scipy.optimize import brentq
-
-        hi = q_max() * (1 - 1e-9)
-        Q = brentq(residual, hi * 1e-12, hi, xtol=1e-9 * hi) if residual(hi) > 0 else hi
+        Q = _rate_heat_exchanger(u, hot, cold, Ph, Pc, th, zones, outlets, curves)
         h_out, c_out = outlets(Q)
     dT_hot_end = hot.T - c_out.T  # hot inlet against cold outlet
     dT_cold_end = h_out.T - cold.T  # hot outlet against cold inlet
+    if Q < 0 or min(dT_hot_end, dT_cold_end) <= 0:
+        raise _InputError(_error("temperature_cross", "unit", u.id, target=u.id,
+                                 hot_end=round(dT_hot_end, 2), cold_end=round(dT_cold_end, 2)))
+    qs, t_hot, t_cold = curves(Q, h_out, c_out)
+    ua, dt_min, k_min = _zone_ua(qs, t_hot, t_cold)
+    if dt_min <= 0:
+        raise _InputError(_error("internal_temperature_cross", "unit", u.id, target=u.id,
+                                 approach=round(dt_min, 2), at=f"{qs[k_min] / Q:.0%}"))
     results = {
         "duty": _q(Q, "W"),
         "hot_outlet_temperature": _q(h_out.T, "K"),
         "cold_outlet_temperature": _q(c_out.T, "K"),
         "approach_hot_end": _q(dT_hot_end, "K"),
         "approach_cold_end": _q(dT_cold_end, "K"),
+        "minimum_approach": _q(dt_min, "K"),
+        "lmtd": _q(_lmtd(dT_hot_end, dT_cold_end), "K"),
+        "mean_temperature_difference": _q(Q / ua, "K"),
+        "ua": _q(ua, "W/K"),
+        "zones": _q(float(len(qs) - 1), "1"),
+        _PROFILE: {
+            "axis": {"name": "duty", "unit": "W", "values": qs},
+            "series": {
+                "hot_temperature": {"unit": "K", "values": t_hot},
+                "cold_temperature": {"unit": "K", "values": t_cold},
+            },
+        },
     }
-    if Q < 0 or min(dT_hot_end, dT_cold_end) <= 0:
-        raise _InputError(_error("temperature_cross", "unit", u.id, target=u.id,
-                                 hot_end=round(dT_hot_end, 2), cold_end=round(dT_cold_end, 2)))
-    if abs(dT_hot_end - dT_cold_end) > 1e-9:
-        lmtd = (dT_hot_end - dT_cold_end) / math.log(dT_hot_end / dT_cold_end)
-    else:
-        lmtd = dT_hot_end
-    results["lmtd"] = _q(lmtd, "K")
-    results["ua"] = _q(Q / lmtd, "W/K")
     return {"hot_out": h_out, "cold_out": c_out}, results
+
+
+def _rate_heat_exchanger(u, hot, cold, Ph, Pc, th, zones, outlets, curves) -> float:
+    """Duty for a given UA. Tabulated heat curves (T against duty, _HX_TABLE points each)
+    give a cheap zoned UA(Q) for bracketing; a few exact secant steps then make the
+    reported zoned UA equal the specification."""
+    from scipy.optimize import brentq
+
+    UA = (u.specs["ua"].value if "ua" in u.specs
+          else u.specs["u_overall"].value * u.specs["area"].value)
+    if hot.T <= cold.T:
+        raise _InputError(_error("temperature_cross", "unit", u.id, target=u.id,
+                                 hot_end=round(hot.T - cold.T, 2), cold_end=round(hot.T - cold.T, 2)))
+    # Largest duty without an end cross: neither stream passes the other's inlet T.
+    hot_lim = hot.F * (hot.H - th.flash(hot.zs, T=cold.T, P=Ph).H)  # type: ignore[arg-type, operator]
+    cold_lim = cold.F * (th.flash(cold.zs, T=hot.T, P=Pc).H - cold.H)  # type: ignore[arg-type, operator]
+    hi = min(hot_lim, cold_lim) * (1 - 1e-9)
+    # Tabulated curves over [0, hi]: hot by heat released from its inlet, cold by heat absorbed.
+    grid = [hi * k / (_HX_TABLE - 1) for k in range(_HX_TABLE)]
+    tab_hot = [float(hot.T)] + [th.flash(hot.zs, P=hot.P - (hot.P - Ph) * r / hi,  # type: ignore[arg-type]
+                                         H=hot.H - r / hot.F).T for r in grid[1:]]  # type: ignore[operator]
+    tab_cold = [float(cold.T)] + [th.flash(cold.zs, P=cold.P - (cold.P - Pc) * a / hi,  # type: ignore[arg-type]
+                                           H=cold.H + a / cold.F).T for a in grid[1:]]  # type: ignore[operator]
+
+    def interp(table: list[float], x: float) -> float:
+        pos = min(max(x / hi, 0.0), 1.0) * (_HX_TABLE - 1)
+        k = min(int(pos), _HX_TABLE - 2)
+        return table[k] + (table[k + 1] - table[k]) * (pos - k)
+
+    def approx(Q: float) -> float:
+        qs = [Q * k / zones for k in range(zones + 1)]
+        ua, _, _ = _zone_ua(qs, [interp(tab_hot, Q - q) for q in qs], [interp(tab_cold, q) for q in qs])
+        return min(ua, 1e300) - UA
+
+    lo = hi * 1e-9
+    Q = brentq(approx, lo, hi, xtol=1e-7 * hi) if approx(hi) > 0 else hi
+
+    def exact(Q: float) -> float:
+        ho, co = outlets(Q)
+        if ho.T <= cold.T or co.T >= hot.T:
+            return math.inf
+        return _zone_ua(*curves(Q, ho, co))[0] - UA
+
+    # Secant refinement on the exact zoned UA (curve interpolation and pressure profile).
+    q0, f0 = Q, exact(Q)
+    if not math.isfinite(f0):
+        return Q
+    q1 = Q * (1 - 1e-4)
+    f1 = exact(q1)
+    for _ in range(8):
+        if abs(f1) <= 1e-9 * UA or not math.isfinite(f1) or f1 == f0:
+            break
+        q0, f0, q1 = q1, f1, q1 - f1 * (q1 - q0) / (f1 - f0)
+        q1 = min(max(q1, lo), hi)
+        f1 = exact(q1)
+    return q1 if math.isfinite(f1) and abs(f1) <= abs(f0) else q0
 
 
 def _solve_conversion_reactor(u, inlets, outs, th, fs):

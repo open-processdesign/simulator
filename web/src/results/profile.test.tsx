@@ -28,7 +28,7 @@ describe("stage profiles", () => {
   it("draws two charts with a legend and direct labels, and offers a table in the unit set", async () => {
     const user = userEvent.setup();
     renderWithApp(<UnitSetProvider initial="METRIC"><ProfileCharts unitId="T-1" profile={profile} doc={doc} /></UnitSetProvider>, doc);
-    const region = screen.getByRole("region", { name: "Stage profiles of T-1" });
+    const region = screen.getByRole("region", { name: "Profiles of T-1" });
     expect(within(region).getByRole("img", { name: "Temperature [°C]" })).toBeInTheDocument();
     expect(within(region).getByRole("img", { name: "Liquid mole fraction" })).toBeInTheDocument();
     expect(within(region).getAllByText("alpha").length).toBeGreaterThanOrEqual(1);
@@ -38,4 +38,25 @@ describe("stage profiles", () => {
     expect(rows[0].textContent).toBe("StageT [°C]L [kmol/h]V [kmol/h]x alphax beta");
     expect(within(rows[1]).getAllByRole("cell").map((c) => c.textContent)).toEqual(["1", "80.00", "36.000", "0.000", "0.9000", "0.1000"]);
   });
+
+  it("draws heat-exchanger T–Q curves with ΔT in the table", async () => {
+    const user = userEvent.setup();
+    const heat = {
+      axis: { name: "duty", unit: "W", values: [0, 30000, 44000, 47000] },
+      series: {
+        hot_temperature: { unit: "K", values: [330, 373.15, 373.15, 450] },
+        cold_temperature: { unit: "K", values: [300, 340, 360, 363.15] },
+      },
+    };
+    renderWithApp(<UnitSetProvider initial="METRIC"><ProfileCharts unitId="E-1" profile={heat} doc={doc} /></UnitSetProvider>, doc);
+    const region = screen.getByRole("region", { name: "Profiles of E-1" });
+    expect(within(region).getByText(/heat curves/)).toBeInTheDocument();
+    expect(within(region).getByRole("img", { name: "Temperature [°C]" })).toBeInTheDocument();
+    expect(within(region).queryByRole("img", { name: "Mole fraction" })).toBeNull();
+    await user.click(within(region).getByRole("button", { name: "Show table" }));
+    const rows = within(region).getAllByRole("row");
+    expect(rows[0].textContent).toMatch(/^Duty \[.+\]Hot side \[°C\]Cold side \[°C\]ΔT \[.+\]$/);
+    expect(within(rows[3]).getAllByRole("cell").slice(1).map((c) => c.textContent)).toEqual(["100.00", "86.85", "13.15"]);
+  });
 });
+

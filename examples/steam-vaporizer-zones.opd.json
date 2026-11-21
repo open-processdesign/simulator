@@ -1,0 +1,52 @@
+{
+  "format": "opd-flowsheet",
+  "version": "0.1",
+  "name": "Steam-heated vaporizer (zone analysis)",
+  "description": "Superheated 5 bar steam condenses and subcools while a benzene-toluene liquid is heated and partly vaporised. Both sides change phase, so the heat curves bend; the zoned UA and the internal pinch differ from an end-temperature LMTD estimate.",
+  "components": [
+    { "id": "water", "name": "Water", "cas": "7732-18-5", "formula": "H2O" },
+    { "id": "benzene", "name": "Benzene", "cas": "71-43-2", "formula": "C6H6" },
+    { "id": "toluene", "name": "Toluene", "cas": "108-88-3", "formula": "C7H8" }
+  ],
+  "thermo": { "package": "IDEAL" },
+  "units": [
+    { "id": "STEAM", "type": "feed", "label": "Steam" },
+    { "id": "FEED", "type": "feed", "label": "Aromatics feed" },
+    {
+      "id": "E-101", "type": "heat_exchanger", "label": "Vaporizer",
+      "specs": { "hot_outlet_temperature": { "value": 400.0, "unit": "K" } },
+      "options": { "zones": 10 }
+    },
+    { "id": "COND", "type": "product", "label": "Condensate" },
+    { "id": "VAPOUR", "type": "product", "label": "Heated feed" }
+  ],
+  "streams": [
+    {
+      "id": "S1", "from": { "unit": "STEAM", "port": "out" }, "to": { "unit": "E-101", "port": "hot_in" },
+      "state": {
+        "temperature": { "value": 450.0, "unit": "K" },
+        "pressure": { "value": 500000, "unit": "Pa" },
+        "molar_flow": { "value": 2.0, "unit": "mol/s" },
+        "mole_fractions": { "water": 1.0, "benzene": 0.0, "toluene": 0.0 }
+      }
+    },
+    {
+      "id": "S2", "from": { "unit": "FEED", "port": "out" }, "to": { "unit": "E-101", "port": "cold_in" },
+      "state": {
+        "temperature": { "value": 300.0, "unit": "K" },
+        "pressure": { "value": 101325, "unit": "Pa" },
+        "molar_flow": { "value": 5.0, "unit": "mol/s" },
+        "mole_fractions": { "water": 0.0, "benzene": 0.5, "toluene": 0.5 }
+      }
+    },
+    { "id": "S3", "from": { "unit": "E-101", "port": "hot_out" }, "to": { "unit": "COND", "port": "in" } },
+    { "id": "S4", "from": { "unit": "E-101", "port": "cold_out" }, "to": { "unit": "VAPOUR", "port": "in" } }
+  ],
+  "layout": {
+    "STEAM": { "x": 0, "y": 20 },
+    "FEED": { "x": 0, "y": 200 },
+    "E-101": { "x": 240, "y": 100 },
+    "COND": { "x": 480, "y": 20 },
+    "VAPOUR": { "x": 480, "y": 200 }
+  }
+}

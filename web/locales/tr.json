@@ -10,12 +10,30 @@
     "run": "Çalıştır",
     "results": "Sonuçlar"
   },
-  "actions": { "run": "Çalıştır", "save": "Kaydet", "open": "Aç", "add": "Ekle", "remove": "Kaldır" },
-  "status": { "solved": "Hesaplandı", "missing": "Eksik giriş", "error": "Hata" },
+  "actions": {
+    "run": "Çalıştır",
+    "save": "Kaydet",
+    "open": "Aç",
+    "add": "Ekle",
+    "remove": "Kaldır"
+  },
+  "status": {
+    "solved": "Hesaplandı",
+    "missing": "Eksik giriş",
+    "error": "Hata"
+  },
   "units": {
-    "feed": "Besleme", "product": "Ürün", "mixer": "Karıştırıcı", "splitter": "Ayırıcı", "flash": "Flaş",
-    "heater": "Isıtıcı / Soğutucu", "heat_exchanger": "Isı değiştirici", "pump": "Pompa",
-    "compressor": "Kompresör", "valve": "Vana", "conversion_reactor": "Dönüşüm reaktörü",
+    "feed": "Besleme",
+    "product": "Ürün",
+    "mixer": "Karıştırıcı",
+    "splitter": "Ayırıcı",
+    "flash": "Flaş",
+    "heater": "Isıtıcı / Soğutucu",
+    "heat_exchanger": "Isı değiştirici",
+    "pump": "Pompa",
+    "compressor": "Kompresör",
+    "valve": "Vana",
+    "conversion_reactor": "Dönüşüm reaktörü",
     "shortcut_column": "Kısa yol kolonu"
   },
   "issues": {
@@ -23,6 +41,11 @@
     "missing_spec": "{{target}}: {{spec}} eksik.",
     "unconnected_port": "{{target}}: \"{{port}}\" bağlantı noktası bağlı değil.",
     "fractions_not_normalized": "{{target}}: mol kesirlerinin toplamı 1 değil, {{sum}}.",
-    "missing_binary_parameter": "{{i}}–{{j}} için ikili parametre yok; k_ij = 0 kullanılıyor."
+    "missing_binary_parameter": "{{i}}–{{j}} için ikili parametre yok; k_ij = 0 kullanılıyor.",
+    "duplicate_id": "\"{{id}}\" kimliği birden fazla kez kullanılmış.",
+    "unknown_unit": "{{target}}: var olmayan \"{{unit}}\" ünitesine bağlı.",
+    "unknown_component": "{{target}}: tanımsız bileşen(ler) {{components}}.",
+    "port_used_twice": "{{target}}: \"{{port}}\" bağlantı noktasında birden fazla akım var.",
+    "layout_orphan": "Var olmayan \"{{unit}}\" ünitesi için tuval konumu kayıtlı."
   }
 }

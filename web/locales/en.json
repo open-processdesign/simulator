@@ -10,12 +10,30 @@
     "run": "Run",
     "results": "Results"
   },
-  "actions": { "run": "Run", "save": "Save", "open": "Open", "add": "Add", "remove": "Remove" },
-  "status": { "solved": "Solved", "missing": "Missing input", "error": "Error" },
+  "actions": {
+    "run": "Run",
+    "save": "Save",
+    "open": "Open",
+    "add": "Add",
+    "remove": "Remove"
+  },
+  "status": {
+    "solved": "Solved",
+    "missing": "Missing input",
+    "error": "Error"
+  },
   "units": {
-    "feed": "Feed", "product": "Product", "mixer": "Mixer", "splitter": "Splitter", "flash": "Flash",
-    "heater": "Heater / Cooler", "heat_exchanger": "Heat exchanger", "pump": "Pump",
-    "compressor": "Compressor", "valve": "Valve", "conversion_reactor": "Conversion reactor",
+    "feed": "Feed",
+    "product": "Product",
+    "mixer": "Mixer",
+    "splitter": "Splitter",
+    "flash": "Flash",
+    "heater": "Heater / Cooler",
+    "heat_exchanger": "Heat exchanger",
+    "pump": "Pump",
+    "compressor": "Compressor",
+    "valve": "Valve",
+    "conversion_reactor": "Conversion reactor",
     "shortcut_column": "Shortcut column"
   },
   "issues": {
@@ -23,6 +41,11 @@
     "missing_spec": "{{target}}: {{spec}} is missing.",
     "unconnected_port": "{{target}}: port \"{{port}}\" is not connected.",
     "fractions_not_normalized": "{{target}}: mole fractions add up to {{sum}}, not 1.",
-    "missing_binary_parameter": "No binary parameter for {{i}}–{{j}}; using k_ij = 0."
+    "missing_binary_parameter": "No binary parameter for {{i}}–{{j}}; using k_ij = 0.",
+    "duplicate_id": "Id \"{{id}}\" is used more than once.",
+    "unknown_unit": "{{target}}: connected to unit \"{{unit}}\", which does not exist.",
+    "unknown_component": "{{target}}: unknown component(s) {{components}}.",
+    "port_used_twice": "{{target}}: port \"{{port}}\" has more than one stream.",
+    "layout_orphan": "Canvas position stored for missing unit \"{{unit}}\"."
   }
 }

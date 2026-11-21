@@ -76,6 +76,7 @@ function UnitPanel({ unit, issues, onDeleted }: { unit: Unit; issues: EngineIssu
       {unit.type === "shortcut_column" && <KeysEditor unit={unit} />}
       {(unit.type === "cstr" || unit.type === "pfr") && <KineticsEditor unit={unit} />}
       {unit.type === "equilibrium_reactor" && <EquilibriumEditor unit={unit} />}
+      {unit.type === "heat_exchanger" && <GeometryEditor unit={unit} />}
       {unit.type === "heat_exchanger" && <ZonesEditor unit={unit} />}
 
       {own && (
@@ -404,16 +405,28 @@ function KineticsEditor({ unit }: { unit: Unit }) {
   );
 }
 
+type EqReaction = { stoichiometry: Record<string, number>; ln_k?: { a?: number; b?: number; c?: number } };
+
 function EquilibriumEditor({ unit }: { unit: Unit }) {
   const { t } = useTranslation();
   const { doc, dispatch } = useFlowsheet();
-  const reactions = (unit.options?.reactions as { stoichiometry: Record<string, number> }[] | undefined) ?? [];
-  const save = (next: { stoichiometry: Record<string, number> }[]) => dispatch({ type: "set_options", id: unit.id, options: { reactions: next } });
+  const reactions = (unit.options?.reactions as EqReaction[] | undefined) ?? [];
+  const phase = (unit.options?.phase as string | undefined) ?? "gas";
+  const save = (next: EqReaction[]) => dispatch({ type: "set_options", id: unit.id, options: { reactions: next } });
+  const update = (k: number, r: EqReaction) => save(reactions.map((x, i) => (i === k ? r : x)));
   if (doc.components.length === 0) return <p className="text-sm text-muted">{t("flowsheet.no_components")}</p>;
   return (
     <fieldset className="flex flex-col gap-3 rounded-md border border-border bg-surface p-3">
       <legend className="px-1 text-sm font-semibold">{t("flowsheet.specs.reactions")}</legend>
-      <p className="text-xs text-muted">{t("flowsheet.equilibrium_hint")}</p>
+      <label className="flex items-center justify-between gap-2 text-sm text-muted">
+        {t("flowsheet.phase")}
+        <select value={phase} onChange={(e) => dispatch({ type: "set_options", id: unit.id, options: { phase: e.target.value } })}
+          className="h-7 w-[11.5rem] rounded-sm border border-border-strong bg-surface px-2 text-sm text-text">
+          <option value="gas">{t("flowsheet.phase_gas")}</option>
+          <option value="liquid">{t("flowsheet.phase_liquid")}</option>
+        </select>
+      </label>
+      <p className="text-xs text-muted">{t(phase === "liquid" ? "flowsheet.equilibrium_hint_liquid" : "flowsheet.equilibrium_hint")}</p>
       {reactions.map((r, k) => (
         <div key={k} className="flex flex-col gap-1.5 border-t border-border pt-3">
           <div className="flex items-center justify-between">
@@ -429,9 +442,36 @@ function EquilibriumEditor({ unit }: { unit: Unit }) {
                 const st = { ...r.stoichiometry };
                 if (v === null || v === 0) delete st[c.id];
                 else st[c.id] = v;
-                save(reactions.map((x, i) => (i === k ? { stoichiometry: st } : x)));
+                update(k, { ...r, stoichiometry: st });
               }} />
           ))}
+          <label className="flex items-center justify-between gap-2 text-sm text-muted">
+            {t("flowsheet.k_source")}
+            <select value={r.ln_k ? "correlation" : "formation"}
+              onChange={(e) => {
+                const next: EqReaction = { stoichiometry: r.stoichiometry };
+                if (e.target.value === "correlation") next.ln_k = { a: 0 };
+                update(k, next);
+              }}
+              className="h-7 w-[11.5rem] rounded-sm border border-border-strong bg-surface px-2 text-sm text-text">
+              <option value="formation">{t("flowsheet.k_formation")}</option>
+              <option value="correlation">{t("flowsheet.k_correlation")}</option>
+            </select>
+          </label>
+          {r.ln_k && (
+            <>
+              <p className="text-xs text-muted">{t("flowsheet.k_correlation_hint")}</p>
+              {(["a", "b", "c"] as const).map((name) => (
+                <QuantityField key={name} label={t(`flowsheet.k_coef_${name}`)} name="number" value={r.ln_k?.[name]}
+                  onCommit={(v) => {
+                    const lnk = { ...r.ln_k };
+                    if (v === null || v === 0) delete lnk[name];
+                    else lnk[name] = v;
+                    update(k, { ...r, ln_k: Object.keys(lnk).length ? lnk : { a: 0 } });
+                  }} />
+              ))}
+            </>
+          )}
         </div>
       ))}
       <Button variant="secondary" size="sm" onClick={() => save([...reactions, { stoichiometry: {} }])}>
@@ -460,6 +500,71 @@ function ZonesEditor({ unit }: { unit: Unit }) {
           className="num h-7 w-[11.5rem] rounded-sm border border-border-strong bg-surface px-2 text-right text-sm text-text" />
       </label>
       <p className="text-xs text-muted">{t("flowsheet.zones_hint")}</p>
+    </fieldset>
+  );
+}
+
+/** Starting geometry when the user switches shell-and-tube on (SI; 19 mm tubes, 2 passes). */
+const DEFAULT_GEOMETRY = {
+  tube_outer_diameter: 0.019, tube_inner_diameter: 0.0148, tube_length: 4.88, tube_count: 160, tube_passes: 2,
+  pitch: 0.0254, layout: "triangular", shell_inner_diameter: 0.489, baffle_spacing: 0.2, tube_side: "cold",
+};
+const GEOMETRY_FIELDS = ["tube_outer_diameter", "tube_inner_diameter", "tube_length", "tube_count", "pitch",
+  "shell_inner_diameter", "baffle_spacing", "wall_conductivity", "fouling_tube", "fouling_shell"] as const;
+
+/** Optional shell-and-tube geometry (Kern's method in the engine). */
+function GeometryEditor({ unit }: { unit: Unit }) {
+  const { t } = useTranslation();
+  const { dispatch } = useFlowsheet();
+  const geometry = unit.options?.geometry as Record<string, number | string> | undefined;
+  const set = (next: Record<string, number | string> | undefined) =>
+    dispatch({ type: "set_options", id: unit.id, options: { geometry: next } });
+  const select = "h-7 w-[11.5rem] rounded-sm border border-border-strong bg-surface px-2 text-sm text-text";
+  return (
+    <fieldset className="flex flex-col gap-2 rounded-md border border-border bg-surface p-3">
+      <legend className="px-1 text-sm font-semibold">{t("flowsheet.geometry")}</legend>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={!!geometry} onChange={(e) => set(e.target.checked ? { ...DEFAULT_GEOMETRY } : undefined)} />
+        {t("flowsheet.geometry_enable")}
+      </label>
+      <p className="text-xs text-muted">{t("flowsheet.geometry_hint")}</p>
+      {geometry && (
+        <>
+          <label className="flex items-center justify-between gap-2 text-sm text-muted">
+            {t("flowsheet.geometry_fields.tube_side")}
+            <select value={(geometry.tube_side as string) ?? "cold"} className={select}
+              onChange={(e) => set({ ...geometry, tube_side: e.target.value })}>
+              <option value="cold">{t("flowsheet.geometry_fields.side_cold")}</option>
+              <option value="hot">{t("flowsheet.geometry_fields.side_hot")}</option>
+            </select>
+          </label>
+          <label className="flex items-center justify-between gap-2 text-sm text-muted">
+            {t("flowsheet.geometry_fields.tube_passes")}
+            <select value={String(geometry.tube_passes ?? 1)} className={select}
+              onChange={(e) => set({ ...geometry, tube_passes: Number(e.target.value) })}>
+              {[1, 2, 4, 6, 8].map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+          <label className="flex items-center justify-between gap-2 text-sm text-muted">
+            {t("flowsheet.geometry_fields.layout")}
+            <select value={(geometry.layout as string) ?? "triangular"} className={select}
+              onChange={(e) => set({ ...geometry, layout: e.target.value })}>
+              <option value="triangular">{t("flowsheet.geometry_fields.triangular")}</option>
+              <option value="square">{t("flowsheet.geometry_fields.square")}</option>
+            </select>
+          </label>
+          {GEOMETRY_FIELDS.map((name) => (
+            <QuantityField key={name} label={t(`flowsheet.geometry_fields.${name}`)} name={name}
+              value={geometry[name] as number | undefined}
+              onCommit={(v) => {
+                const next = { ...geometry };
+                if (v === null) delete next[name];
+                else next[name] = name === "tube_count" ? Math.round(v) : v;
+                set(next);
+              }} />
+          ))}
+        </>
+      )}
     </fieldset>
   );
 }

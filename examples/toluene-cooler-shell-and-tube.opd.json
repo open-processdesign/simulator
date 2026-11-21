@@ -1,0 +1,58 @@
+{
+  "format": "opd-flowsheet",
+  "version": "0.1",
+  "name": "Toluene cooler, shell-and-tube rating",
+  "description": "Hot toluene on the shell side is cooled by water in the tubes of a 1-2 shell-and-tube exchanger (160 tubes of 19 mm, 4.88 m). No outlet temperature is given: Kern's method gives U, the exchanger is rated and the pressure drops are applied. Add an outlet temperature to see the over-design instead.",
+  "components": [
+    { "id": "toluene", "name": "Toluene", "cas": "108-88-3", "formula": "C7H8" },
+    { "id": "water", "name": "Water", "cas": "7732-18-5", "formula": "H2O" }
+  ],
+  "thermo": { "package": "IDEAL" },
+  "units": [
+    { "id": "HOT", "type": "feed", "label": "Hot toluene" },
+    { "id": "CW", "type": "feed", "label": "Cooling water" },
+    {
+      "id": "E-101", "type": "heat_exchanger", "label": "Toluene cooler",
+      "specs": {},
+      "options": {
+        "geometry": {
+          "tube_outer_diameter": 0.019, "tube_inner_diameter": 0.0148, "tube_length": 4.88,
+          "tube_count": 160, "tube_passes": 2, "pitch": 0.0254, "layout": "triangular",
+          "shell_inner_diameter": 0.489, "baffle_spacing": 0.2, "tube_side": "cold",
+          "fouling_tube": 0.0002, "fouling_shell": 0.0002
+        }
+      }
+    },
+    { "id": "TOL", "type": "product", "label": "Cooled toluene" },
+    { "id": "CWR", "type": "product", "label": "Cooling water return" }
+  ],
+  "streams": [
+    {
+      "id": "S1", "from": { "unit": "HOT", "port": "out" }, "to": { "unit": "E-101", "port": "hot_in" },
+      "state": {
+        "temperature": { "value": 370.0, "unit": "K" },
+        "pressure": { "value": 300000, "unit": "Pa" },
+        "molar_flow": { "value": 100.0, "unit": "mol/s" },
+        "mole_fractions": { "toluene": 1.0, "water": 0.0 }
+      }
+    },
+    {
+      "id": "S2", "from": { "unit": "CW", "port": "out" }, "to": { "unit": "E-101", "port": "cold_in" },
+      "state": {
+        "temperature": { "value": 298.15, "unit": "K" },
+        "pressure": { "value": 400000, "unit": "Pa" },
+        "molar_flow": { "value": 700.0, "unit": "mol/s" },
+        "mole_fractions": { "toluene": 0.0, "water": 1.0 }
+      }
+    },
+    { "id": "S3", "from": { "unit": "E-101", "port": "hot_out" }, "to": { "unit": "TOL", "port": "in" } },
+    { "id": "S4", "from": { "unit": "E-101", "port": "cold_out" }, "to": { "unit": "CWR", "port": "in" } }
+  ],
+  "layout": {
+    "HOT": { "x": 0, "y": 20 },
+    "CW": { "x": 0, "y": 200 },
+    "E-101": { "x": 240, "y": 100 },
+    "TOL": { "x": 480, "y": 20 },
+    "CWR": { "x": 480, "y": 200 }
+  }
+}

@@ -175,3 +175,9 @@ Template:
 - Tests: engine 184 passed; web 56 passed.
 - PR: agent/T28-release-v0.1 (stacked on T27).
 - Next / blockers: merge #25–#29, tag `v0.1.0`; HDA CHEMCAD validation (Q8); DWSIM needs a server.
+
+## 2026-11-22 — Claude (maintainer-requested session) — T28 close-out
+- Done: PRs #23–#29 are in `main` (CI green: engine, web, pages); T23–T28 marked done; CHANGELOG dated; README status; tag `v0.1.0` and GitHub release (pre-release, demo build) after this PR.
+- Tests: no code changes.
+- PR: agent/T28-close-out.
+- Next / blockers: HDA vs CHEMCAD validation (Q8); T90 DWSIM spike needs a host (D012).

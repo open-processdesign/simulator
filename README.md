@@ -6,7 +6,7 @@ Open a link, build any flowsheet, run it, read the results — no installation, 
 **Live demo: https://open-processdesign.github.io/simulator/** — runs entirely in your browser
 (the first visit downloads about 70 MB for the calculation engine; later visits use the browser cache).
 
-> **Status:** v0.1 release candidate — see [CHANGELOG.md](CHANGELOG.md). Demo video: [docs/media/demo.mp4](docs/media/demo.mp4) (98 s).
+> **Status:** v0.1.0 released (2026-11-22) — see [CHANGELOG.md](CHANGELOG.md). Demo video: [docs/media/demo.mp4](docs/media/demo.mp4) (98 s).
 > Results are for **education and preliminary design only**. Verify them before use.
 
 ![Flowsheet of a simplified HDA process with recycle, stream table below the canvas](docs/screenshots/flowsheet.png)

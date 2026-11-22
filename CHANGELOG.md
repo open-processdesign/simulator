@@ -2,7 +2,7 @@
 
 All notable changes. Versions follow [Semantic Versioning](https://semver.org/); dates are UTC.
 
-## [0.1.0] — release candidate (target 2027-03-15)
+## [0.1.0] — 2026-11-22
 
 First public release: a general-purpose steady-state simulator in the browser, checked against
 published cases. See `docs/VALIDATION.md` for every check and its tolerance.

@@ -1,0 +1,43 @@
+{
+  "format": "opd-flowsheet",
+  "version": "0.1",
+  "name": "MTBE synthesis, liquid-phase equilibrium",
+  "description": "Isobutene + methanol ⇌ MTBE in the liquid phase at 70 °C and 20 bar. NRTL activities; K from the correlation ln K = 4703/T − 10.3 (Izquierdo et al., recommended by Badia et al., J. Chem. Eng. Data 2016). Switch the constant to 'formation data' to compare.",
+  "components": [
+    { "id": "isobutene", "name": "Isobutene", "cas": "115-11-7", "formula": "C4H8" },
+    { "id": "methanol", "name": "Methanol", "cas": "67-56-1", "formula": "CH4O" },
+    { "id": "mtbe", "name": "MTBE", "cas": "1634-04-4", "formula": "C5H12O" }
+  ],
+  "thermo": { "package": "NRTL" },
+  "units": [
+    { "id": "FEED", "type": "feed", "label": "Isobutene + methanol" },
+    {
+      "id": "R-101", "type": "equilibrium_reactor", "label": "MTBE reactor",
+      "specs": { "temperature": { "value": 343.15, "unit": "K" } },
+      "options": {
+        "phase": "liquid",
+        "reactions": [
+          { "stoichiometry": { "isobutene": -1, "methanol": -1, "mtbe": 1 }, "ln_k": { "a": -10.3, "b": 4703 } }
+        ]
+      }
+    },
+    { "id": "PROD", "type": "product", "label": "Reactor effluent" }
+  ],
+  "streams": [
+    {
+      "id": "S1", "from": { "unit": "FEED", "port": "out" }, "to": { "unit": "R-101", "port": "in" },
+      "state": {
+        "temperature": { "value": 323.15, "unit": "K" },
+        "pressure": { "value": 2000000, "unit": "Pa" },
+        "molar_flow": { "value": 10.0, "unit": "mol/s" },
+        "mole_fractions": { "isobutene": 0.48, "methanol": 0.52, "mtbe": 0.0 }
+      }
+    },
+    { "id": "S2", "from": { "unit": "R-101", "port": "out" }, "to": { "unit": "PROD", "port": "in" } }
+  ],
+  "layout": {
+    "FEED": { "x": 0, "y": 100 },
+    "R-101": { "x": 240, "y": 80 },
+    "PROD": { "x": 480, "y": 100 }
+  }
+}

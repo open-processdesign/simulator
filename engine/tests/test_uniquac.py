@@ -32,3 +32,10 @@ def test_uniquac_parameter_sources():
     rows = runtime.binary_parameters({"components": base.MW, "thermo": {"package": "UNIQUAC"}})
     assert [(r["i"], r["j"], r["name"], r["source"]) for r in rows] == [
         ("methanol", "water", "uniquac_b", "database"), ("water", "methanol", "uniquac_b", "database")]
+
+
+def test_uniquac_with_an_absent_component_solves():
+    # thermo's UNIQUAC divides by x_i; absent components get a trace in the flash.
+    comps = base.MW + [{"id": "ethanol", "name": "Ethanol", "cas": "64-17-5"}]
+    T, ys, result = base.bubble(comps, {"methanol": 0.5, "water": 0.5, "ethanol": 0.0}, package="UNIQUAC")
+    assert T == pytest.approx(73.1 + 273.15, abs=0.7)

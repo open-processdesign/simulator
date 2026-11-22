@@ -1,0 +1,289 @@
+{
+ "format": "opd-flowsheet",
+ "version": "0.1",
+ "name": "Cumene Unit 800 (Turton) — validation",
+ "description": "Reactor section and flash of Turton's cumene Unit 800 (WVU design project, CHEMCAD stream table). Feed = Stream 6; reaction extents from Streams 7 → 8. Compare duties of E-801, H-801, R-801, E-802 and the V-802 split with the published table (docs/VALIDATION.md).",
+ "components": [
+  {
+   "id": "propylene",
+   "name": "Propylene",
+   "cas": "115-07-1",
+   "formula": "C3H6"
+  },
+  {
+   "id": "propane",
+   "name": "Propane",
+   "cas": "74-98-6",
+   "formula": "C3H8"
+  },
+  {
+   "id": "benzene",
+   "name": "Benzene",
+   "cas": "71-43-2",
+   "formula": "C6H6"
+  },
+  {
+   "id": "cumene",
+   "name": "Cumene",
+   "cas": "98-82-8",
+   "formula": "C9H12"
+  },
+  {
+   "id": "pdipb",
+   "name": "p-Diisopropylbenzene",
+   "cas": "100-18-5",
+   "formula": "C12H18"
+  }
+ ],
+ "thermo": {
+  "package": "SRK"
+ },
+ "units": [
+  {
+   "id": "FEED",
+   "type": "feed",
+   "label": "Reactor feed (Stream 6)"
+  },
+  {
+   "id": "E-801",
+   "type": "heater",
+   "label": "Feed vaporizer",
+   "specs": {
+    "temperature": {
+     "value": 487.15,
+     "unit": "K"
+    },
+    "pressure": {
+     "value": 3095000.0,
+     "unit": "Pa"
+    }
+   }
+  },
+  {
+   "id": "H-801",
+   "type": "heater",
+   "label": "Fired heater",
+   "specs": {
+    "temperature": {
+     "value": 623.15,
+     "unit": "K"
+    },
+    "pressure": {
+     "value": 3075000.0,
+     "unit": "Pa"
+    }
+   }
+  },
+  {
+   "id": "R-801",
+   "type": "conversion_reactor",
+   "label": "Cumene reactor",
+   "specs": {
+    "temperature": {
+     "value": 623.15,
+     "unit": "K"
+    },
+    "pressure": {
+     "value": 3025000.0,
+     "unit": "Pa"
+    }
+   },
+   "options": {
+    "reactions": [
+     {
+      "stoichiometry": {
+       "propylene": -1,
+       "benzene": -1,
+       "cumene": 1
+      },
+      "key": "propylene",
+      "conversion": 0.89202
+     },
+     {
+      "stoichiometry": {
+       "propylene": -1,
+       "cumene": -1,
+       "pdipb": 1
+      },
+      "key": "propylene",
+      "conversion": 0.239485
+     }
+    ]
+   }
+  },
+  {
+   "id": "E-802",
+   "type": "heater",
+   "label": "Reactor effluent cooler",
+   "specs": {
+    "temperature": {
+     "value": 363.15,
+     "unit": "K"
+    },
+    "pressure": {
+     "value": 175000.0,
+     "unit": "Pa"
+    }
+   }
+  },
+  {
+   "id": "V-802",
+   "type": "flash",
+   "label": "Flash drum",
+   "specs": {
+    "duty": {
+     "value": 0.0,
+     "unit": "W"
+    },
+    "pressure": {
+     "value": 175000.0,
+     "unit": "Pa"
+    }
+   }
+  },
+  {
+   "id": "FUEL",
+   "type": "product",
+   "label": "Fuel gas (Stream 9)"
+  },
+  {
+   "id": "CRUDE",
+   "type": "product",
+   "label": "Crude product (Stream 10)"
+  }
+ ],
+ "streams": [
+  {
+   "id": "S6",
+   "from": {
+    "unit": "FEED",
+    "port": "out"
+   },
+   "to": {
+    "unit": "E-801",
+    "port": "in"
+   },
+   "state": {
+    "temperature": {
+     "value": 314.15,
+     "unit": "K"
+    },
+    "pressure": {
+     "value": 3125000.0,
+     "unit": "Pa"
+    },
+    "molar_flow": {
+     "value": 89.4888888888889,
+     "unit": "mol/s"
+    },
+    "mole_fractions": {
+     "propylene": 0.3348957039980134,
+     "propane": 0.025018624286069033,
+     "benzene": 0.6371678668984355,
+     "cumene": 0.002917804817481996,
+     "pdipb": 0.0
+    }
+   }
+  },
+  {
+   "id": "S6a",
+   "from": {
+    "unit": "E-801",
+    "port": "out"
+   },
+   "to": {
+    "unit": "H-801",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S7",
+   "from": {
+    "unit": "H-801",
+    "port": "out"
+   },
+   "to": {
+    "unit": "R-801",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S8",
+   "from": {
+    "unit": "R-801",
+    "port": "out"
+   },
+   "to": {
+    "unit": "E-802",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S8b",
+   "from": {
+    "unit": "E-802",
+    "port": "out"
+   },
+   "to": {
+    "unit": "V-802",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S9",
+   "from": {
+    "unit": "V-802",
+    "port": "vapor"
+   },
+   "to": {
+    "unit": "FUEL",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S10",
+   "from": {
+    "unit": "V-802",
+    "port": "liquid"
+   },
+   "to": {
+    "unit": "CRUDE",
+    "port": "in"
+   }
+  }
+ ],
+ "layout": {
+  "FEED": {
+   "x": 0,
+   "y": 120
+  },
+  "E-801": {
+   "x": 180,
+   "y": 100
+  },
+  "H-801": {
+   "x": 360,
+   "y": 100
+  },
+  "R-801": {
+   "x": 540,
+   "y": 100
+  },
+  "E-802": {
+   "x": 720,
+   "y": 100
+  },
+  "V-802": {
+   "x": 900,
+   "y": 90
+  },
+  "FUEL": {
+   "x": 1080,
+   "y": 20
+  },
+  "CRUDE": {
+   "x": 1080,
+   "y": 220
+  }
+ }
+}

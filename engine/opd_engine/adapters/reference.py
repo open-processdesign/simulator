@@ -89,7 +89,8 @@ from .. import adapter as _adapter
 from ..adapter import Capabilities, Issue, OPDDocument, Severity, SimulationResult, Target
 from ..models import Flowsheet, Stream, Unit, check_references, load
 from .column import ColumnError, solve_column
-from .equilibrium import EquilibriumError, ln_k, solve_adiabatic, solve_equilibrium
+from . import hx_geometry
+from .equilibrium import EquilibriumError, ln_k, phase_ln_k, solve_adiabatic, solve_equilibrium
 from .kinetics import KineticsError, parse_rate_laws, solve_cstr, solve_pfr
 from .recycle import Accelerator, Block, Edge, solve_plan
 
@@ -132,6 +133,8 @@ _KIJ_TABLE = {"PR": "ChemSep PR"}
 
 # Key a unit solver may add to its results to return a profile (moved to results.profiles).
 _PROFILE = "__profile__"
+# Key a unit solver may add with a list of warning issues (the last solve of a unit wins).
+_WARNINGS = "__warnings__"
 
 # Flow below this is treated as an empty stream (mol/s).
 _ZERO_FLOW = 1e-12
@@ -173,6 +176,7 @@ class _Thermo:
         self.cas = [c.cas for c in fs.components]
         self.package = fs.thermo.package
         self.issues: list[Issue] = []
+        self.in_loop = False  # set while a recycle loop iterates (see ReferenceAdapter._converge)
         self._fs = fs
         self._pure: dict[int, _Thermo] = {}
         self.constants, self.props = ChemicalConstantsPackage.from_IDs(self.cas)
@@ -295,18 +299,93 @@ class _Thermo:
         A stream with a single non-zero component is flashed with that component's own
         pure flasher: `thermo` 0.6.1's mixture flasher fails (P–H) or returns a wrong
         phase (P–VF with PR) for such two-phase states. Phase compositions are mapped back."""
+        if len(zs) > 1 and min(zs) < 0:  # round-off negatives from upstream arithmetic
+            zs = [max(z, 0.0) for z in zs]
+            total = sum(zs)
+            zs = [z / total for z in zs]
         if len(zs) > 1:
             nonzero = [k for k, z in enumerate(zs) if z > 0]
             if len(nonzero) == 1:
                 return _PureResult(self._pure_thermo(nonzero[0]).flash_raw([1.0], **spec),
                                    nonzero[0], len(zs))
+            if self.package == "UNIQUAC" and len(nonzero) < len(zs):
+                # thermo's UNIQUAC divides by x_i: absent components get a trace (1e-12).
+                zs = [max(z, 1e-12) for z in zs]
+                total = sum(zs)
+                zs = [z / total for z in zs]
         kwargs = dict(spec) if len(zs) == 1 else dict(spec, zs=zs)
         try:
             return self.flasher.flash(**kwargs)
         except Exception:
             if set(spec) == {"P", "VF"} and 0 < spec["VF"] < 1 and len(zs) > 1:
                 return self._flash_PVF_bisect(zs, spec["P"], spec["VF"])
+            if set(spec) == {"P", "VF"} and spec["VF"] in (0.0, 1.0) and len(zs) > 1:
+                return self._flash_PVF_edge(zs, spec["P"], spec["VF"])
+            if set(spec) == {"P", "H"} and len(zs) > 1:
+                return self._flash_PH_bisect(zs, spec["P"], spec["H"])
             raise
+
+    def _flash_PH_bisect(self, zs: list[float], P: float, H: float) -> Any:
+        """P–H flash by bisection on T with P–T flashes (H rises with T at fixed P and z).
+        Fallback for `thermo` 0.6.1 two-phase P–H failures near phase boundaries."""
+        def h(T: float) -> float:
+            return self.flasher.flash(T=T, P=P, zs=zs).H()
+
+        lo, hi = 300.0, 300.0
+        while h(lo) > H:
+            lo *= 0.8
+            if lo < 30.0:
+                raise ValueError("P–H flash: enthalpy below the temperature range")
+        while h(hi) < H:
+            hi *= 1.25
+            if hi > 6000.0:
+                raise ValueError("P–H flash: enthalpy above the temperature range")
+        for _ in range(200):
+            mid = 0.5 * (lo + hi)
+            if h(mid) < H:
+                lo = mid
+            else:
+                hi = mid
+            if hi - lo < 1e-10 * mid:
+                break
+        return self.flasher.flash(T=0.5 * (lo + hi), P=P, zs=zs)
+
+    def _flash_PVF_edge(self, zs: list[float], P: float, VF: float) -> Any:
+        """Bubble (VF = 0) or dew (VF = 1) point by bisection on T with P–T flashes.
+
+        Fallback for `thermo` 0.6.1 failures with dissolved light gases (H2, CH4). Brackets
+        between a single-phase and a two-phase temperature found by scanning; returns the P–T
+        state just inside the two-phase region (vapour fraction within 1e-9 of the edge)."""
+        def vf(T: float) -> float:
+            return _vapor_fraction(self.flasher.flash(T=T, P=P, zs=zs))
+
+        def outside(v: float) -> bool:  # on the single-phase side of the edge
+            return v <= 0.0 if VF == 0.0 else v >= 1.0
+
+        grid = [300.0 * 1.15 ** k for k in range(-12, 13)]  # ≈ 56 K … 1.6e3 K
+        values = []
+        for T in grid:
+            try:
+                values.append((T, vf(T)))
+            except Exception:  # noqa: BLE001 — skip temperatures thermo cannot flash
+                continue
+        pair = None
+        for (t1, v1), (t2, v2) in zip(values, values[1:]):
+            if outside(v1) != outside(v2):
+                pair = (t1, t2) if outside(v1) else (t2, t1)  # (single-phase T, two-phase T)
+                break
+        if pair is None:
+            raise ValueError(f"no {'bubble' if VF == 0.0 else 'dew'} point at P = {P:.0f} Pa")
+        single, two = pair
+        for _ in range(100):
+            mid = 0.5 * (single + two)
+            if outside(vf(mid)):
+                single = mid
+            else:
+                two = mid
+            if abs(two - single) < 1e-9 * mid:
+                break
+        return self.flasher.flash(T=two, P=P, zs=zs)
 
     def _pure_thermo(self, k: int) -> "_Thermo":
         if k not in self._pure:
@@ -587,6 +666,7 @@ class ReferenceAdapter:
         states: dict[str, _State] = {}
         unit_results: dict[str, dict[str, dict[str, Any]]] = {}
         profiles: dict[str, dict[str, Any]] = {}
+        unit_warnings: dict[str, list[Issue]] = {}
 
         def solve_unit(uid: str) -> Issue | None:
             u = fs.unit(uid)
@@ -605,6 +685,7 @@ class ReferenceAdapter:
             profile = results.pop(_PROFILE, None)
             if profile is not None:
                 profiles[uid] = profile
+            unit_warnings[uid] = results.pop(_WARNINGS, [])
             if results:
                 unit_results[uid] = results
             return None
@@ -618,6 +699,8 @@ class ReferenceAdapter:
                 issues.append(problem)
                 return self._result(doc, False, issues)
 
+        for found in unit_warnings.values():
+            issues += found
         out = copy.deepcopy(doc)
         out["results"] = {
             "engine": self.name,
@@ -638,6 +721,13 @@ class ReferenceAdapter:
             states[sid] = _initial_guess(fs.stream(sid), th)
         acc = Accelerator(method=self.recycle_method)
         residual = math.inf
+        th.in_loop = True
+        try:
+            return self._iterate(block, th, states, solve_unit, issues, acc, n, residual)
+        finally:
+            th.in_loop = False
+
+    def _iterate(self, block, th, states, solve_unit, issues, acc, n, residual):
         for _ in range(self.max_iterations):
             x = {sid: states[sid] for sid in block.tears}
             for uid in block.units:
@@ -655,11 +745,17 @@ class ReferenceAdapter:
             xv = [v for sid in block.tears for v in _to_vector(x[sid], n)]
             gv = [v for sid in block.tears for v in _to_vector(g[sid], n)]
             new = acc.next(xv, gv)
+            width = n + 2
+            if any(new[k * width + i] < 0.0 for k in range(len(block.tears)) for i in range(n)):
+                new = gv  # acceleration overshot to a negative flow: take a plain step instead
             if new == gv:
                 continue  # plain substitution: computed states are reused as they are
-            width = n + 2
             for k, sid in enumerate(block.tears):
-                states[sid] = _from_vector(new[k * width:(k + 1) * width], g[sid], th)
+                try:
+                    states[sid] = _from_vector(new[k * width:(k + 1) * width], g[sid], th)
+                except Exception as exc:  # thermo could not flash the accelerated state
+                    return _error("calculation_failed", "stream", sid, target=sid,
+                                  detail=f"{type(exc).__name__}: {exc}")
         return _error("recycle_not_converged", "stream", block.tears[0], target=block.tears[0],
                       streams=block.tears, iterations=self.max_iterations,
                       residual=float(f"{residual:.3g}"))
@@ -849,9 +945,16 @@ def _check_unit(u: Unit, ins: dict[str, str], outs: dict[str, str],
             if not ("u_overall" in u.specs and "area" in u.specs):
                 issues.append(_missing("unit", u.id, "area" if "u_overall" in u.specs else "u_overall"))
             given.append("u_overall · area")
+        geometry = u.options.get("geometry")
+        if geometry is not None:
+            for name in hx_geometry.check(geometry):
+                issues.append(_error("invalid_option", "unit", u.id, target=u.id, option=f"geometry.{name}"))
+            rating = [n for n in given if n in ("ua", "u_overall · area")]
+            if rating:
+                issues.append(_error("conflicting_specs", "unit", u.id, target=u.id, specs=rating + ["geometry"]))
         if len(given) > 1:
             issues.append(_error("conflicting_specs", "unit", u.id, target=u.id, specs=given))
-        elif not given:
+        elif not given and geometry is None:
             issues.append(_missing("unit", u.id, "hot_outlet_temperature / cold_outlet_temperature / duty / ua"))
         zones = u.options.get("zones", _HX_ZONES)
         if not isinstance(zones, int) or isinstance(zones, bool) or not 1 <= zones <= 100:
@@ -922,6 +1025,13 @@ def _check_unit(u: Unit, ins: dict[str, str], outs: dict[str, str],
                 unknown = sorted(c for c in stoich if c not in (comp_ids or []))
                 if unknown:
                     issues.append(_error("unknown_component", "unit", u.id, target=u.id, components=unknown))
+                corr = r.get("ln_k")
+                if corr is not None and not (
+                        isinstance(corr, dict) and corr and set(corr) <= {"a", "b", "c"}
+                        and all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in corr.values())):
+                    issues.append(_error("invalid_option", "unit", u.id, target=u.id, option=f"ln_k {k}"))
+        if u.options.get("phase", "gas") not in ("gas", "liquid"):
+            issues.append(_error("invalid_option", "unit", u.id, target=u.id, option="phase"))
     elif t == "distillation_column":
         need("in", ins)
         for p in ("distillate", "bottoms"):
@@ -1231,7 +1341,37 @@ def _zone_ua(qs: list[float], t_hot: list[float], t_cold: list[float]) -> tuple[
 
 
 def _solve_heat_exchanger(u, inlets, outs, th, fs):
-    """Two-stream counter-current exchanger, energy balance Q = ΔH_hot = −ΔH_cold.
+    """Two-stream exchanger, energy balance Q = ΔH_hot = −ΔH_cold (see _hx_core).
+
+    With `options.geometry` (T24, D030) the exchanger is a shell-and-tube unit: U from Kern's
+    method at the mean temperatures, A from the tubes, F for 1 shell / 2N tube passes. Without
+    a thermal specification it is rated (U·A·F = zoned UA); with one, the over-design is
+    reported. Pressure drops from the geometry apply where none is specified (re-solved
+    until they settle)."""
+    hot, cold = inlets["hot_in"], inlets["cold_in"]
+    if hot.F <= _ZERO_FLOW or cold.F <= _ZERO_FLOW:
+        raise _InputError(_error("hx_empty_side", "unit", u.id, target=u.id))
+    given_h = u.specs["hot_pressure_drop"].value if "hot_pressure_drop" in u.specs else None
+    given_c = u.specs["cold_pressure_drop"].value if "cold_pressure_drop" in u.specs else None
+    if "geometry" not in u.options:
+        return _hx_core(u, hot, cold, th, given_h or 0.0, given_c or 0.0, None)
+    geom = hx_geometry.parse(u.options["geometry"])
+    dp_h, dp_c = given_h or 0.0, given_c or 0.0
+    for _ in range(4):
+        outlets, results = _hx_core(u, hot, cold, th, dp_h, dp_c, geom)
+        tube_hot = geom.tube_side == "hot"
+        calc_h = results["pressure_drop_tube" if tube_hot else "pressure_drop_shell"]["value"]
+        calc_c = results["pressure_drop_shell" if tube_hot else "pressure_drop_tube"]["value"]
+        new_h = given_h if given_h is not None else calc_h
+        new_c = given_c if given_c is not None else calc_c
+        if abs(new_h - dp_h) <= 1e-3 * max(new_h, 1.0) and abs(new_c - dp_c) <= 1e-3 * max(new_c, 1.0):
+            break
+        dp_h, dp_c = new_h, new_c
+    return outlets, results
+
+
+def _hx_core(u, hot, cold, th, dp_hot, dp_cold, geom):
+    """Counter-current exchanger, energy balance Q = ΔH_hot = −ΔH_cold.
 
     Zone analysis (D028): the duty is split into `options.zones` equal parts, plus extra
     boundaries at each side's bubble and dew points; each side is flashed at the boundaries
@@ -1240,12 +1380,8 @@ def _solve_heat_exchanger(u, inlets, outs, th, fs):
     UA = Σ ΔQ_k/LMTD_k and the T–Q profile. A temperature cross anywhere inside is an
     error. Rating (given UA or U·A) solves zoned UA(Q) = UA; with one zone this is the
     classic end-temperature LMTD method."""
-    hot, cold = inlets["hot_in"], inlets["cold_in"]
-    Ph = hot.P - (u.specs["hot_pressure_drop"].value if "hot_pressure_drop" in u.specs else 0.0)
-    Pc = cold.P - (u.specs["cold_pressure_drop"].value if "cold_pressure_drop" in u.specs else 0.0)
+    Ph, Pc = hot.P - dp_hot, cold.P - dp_cold
     _require_positive_pressure(u, min(Ph, Pc))
-    if hot.F <= _ZERO_FLOW or cold.F <= _ZERO_FLOW:
-        raise _InputError(_error("hx_empty_side", "unit", u.id, target=u.id))
     zones = int(u.options.get("zones", _HX_ZONES))
 
     def outlets(Q: float) -> tuple[_State, _State]:
@@ -1298,9 +1434,26 @@ def _solve_heat_exchanger(u, inlets, outs, th, fs):
     elif "duty" in u.specs:
         Q = u.specs["duty"].value
         h_out, c_out = outlets(Q)
-    else:
-        Q = _rate_heat_exchanger(u, hot, cold, Ph, Pc, th, zones, outlets, curves)
+    elif geom is None:
+        UA = (u.specs["ua"].value if "ua" in u.specs
+              else u.specs["u_overall"].value * u.specs["area"].value)
+        Q = _rate_heat_exchanger(u, UA, hot, cold, Ph, Pc, th, zones, outlets, curves)
         h_out, c_out = outlets(Q)
+    else:
+        # Geometry rating: U depends on the mean temperatures and F on the end temperatures.
+        h_out, c_out = hot, cold
+        UA = math.nan
+        for _ in range(40):
+            g = _hx_geometry_results(u, geom, hot, cold, h_out, c_out, Ph, Pc, th, final=False)
+            UA_new = g["u"] * geom.area
+            if abs(UA_new - UA) <= 1e-7 * UA_new:
+                break
+            UA = UA_new
+            Q = _rate_heat_exchanger(u, UA, hot, cold, Ph, Pc, th, zones, outlets, curves,
+                                     geom.tube_passes)
+            h_out, c_out = outlets(Q)
+        else:
+            raise _InputError(_error("hx_geometry_not_converged", "unit", u.id, target=u.id))
     dT_hot_end = hot.T - c_out.T  # hot inlet against cold outlet
     dT_cold_end = h_out.T - cold.T  # hot outlet against cold inlet
     if Q < 0 or min(dT_hot_end, dT_cold_end) <= 0:
@@ -1311,7 +1464,7 @@ def _solve_heat_exchanger(u, inlets, outs, th, fs):
     if dt_min <= 0:
         raise _InputError(_error("internal_temperature_cross", "unit", u.id, target=u.id,
                                  approach=round(dt_min, 2), at=f"{qs[k_min] / Q:.0%}"))
-    results = {
+    results: dict[str, Any] = {
         "duty": _q(Q, "W"),
         "hot_outlet_temperature": _q(h_out.T, "K"),
         "cold_outlet_temperature": _q(c_out.T, "K"),
@@ -1330,17 +1483,90 @@ def _solve_heat_exchanger(u, inlets, outs, th, fs):
             },
         },
     }
+    if geom is not None:
+        g = _hx_geometry_results(u, geom, hot, cold, h_out, c_out, Ph, Pc, th, final=True)
+        results.update({
+            "area": _q(geom.area, "m2"),
+            "u_overall": _q(g["u"], "W/m2/K"),
+            "f_correction": _q(g["f"], "1"),
+            "overdesign": _q(g["u"] * geom.area * g["f"] / ua - 1, "1"),
+            "h_tube": _q(g["tube"]["h"], "W/m2/K"),
+            "h_shell": _q(g["shell"]["h"], "W/m2/K"),
+            "velocity_tube": _q(g["tube"]["velocity"], "m/s"),
+            "velocity_shell": _q(g["shell"]["velocity"], "m/s"),
+            "reynolds_tube": _q(g["tube"]["reynolds"], "1"),
+            "reynolds_shell": _q(g["shell"]["reynolds"], "1"),
+            "pressure_drop_tube": _q(g["tube"]["pressure_drop"], "Pa"),
+            "pressure_drop_shell": _q(g["shell"]["pressure_drop"], "Pa"),
+            "baffles": _q(float(geom.baffles), "1"),
+        })
+        if g["warnings"]:
+            results[_WARNINGS] = g["warnings"]
     return {"hot_out": h_out, "cold_out": c_out}, results
 
 
-def _rate_heat_exchanger(u, hot, cold, Ph, Pc, th, zones, outlets, curves) -> float:
-    """Duty for a given UA. Tabulated heat curves (T against duty, _HX_TABLE points each)
+def _side_fluid(th, side: _State, T: float, P: float) -> tuple[hx_geometry.Fluid, bool]:
+    """Mass flow and transport properties of one side at (T, P); True if two-phase there.
+    Liquids: pure-component correlations of `thermo` (Cp, liquid volume, μ by log mixing,
+    k); gases: the package's gas phase for ρ and Cp, `thermo` mixing rules for μ and k."""
+    zs = side.zs
+    mws = th.constants.MWs
+    mw = sum(z * m for z, m in zip(zs, mws))  # g/mol
+    ws = [z * m / mw for z, m in zip(zs, mws)]
+    res = th.flash_raw(zs, T=T, P=P)
+    vf = _vapor_fraction(res)
+    props = th.props
+    if vf >= 0.5:
+        gas = res.gas
+        rho, cp = gas.rho_mass(), gas.Cp_mass()
+        mu = props.ViscosityGasMixture.mixture_property(T, P, zs, ws)
+        k = props.ThermalConductivityGasMixture.mixture_property(T, P, zs, ws)
+    else:
+        rho = mw / 1000 / th.liquid_volume(zs, T)
+        cp = props.HeatCapacityLiquidMixture.mixture_property(T, P, zs, ws) / mw * 1000
+        mu = props.ViscosityLiquidMixture.mixture_property(T, P, zs, ws)
+        k = props.ThermalConductivityLiquidMixture.mixture_property(T, P, zs, ws)
+    if not all(isinstance(v, (int, float)) and v > 0 for v in (rho, cp, mu, k)):
+        raise ValueError("missing transport properties")
+    return hx_geometry.Fluid(m=side.F * mw / 1000, rho=rho, cp=cp, mu=mu, k=k), 0.001 < vf < 0.999
+
+
+def _hx_geometry_results(u, geom, hot, cold, h_out, c_out, Ph, Pc, th, final: bool) -> dict[str, Any]:
+    """Film coefficients, U, F and pressure drops at the mean temperature of each side."""
+    try:
+        fh, two_h = _side_fluid(th, hot, 0.5 * (hot.T + h_out.T), 0.5 * (hot.P + Ph))
+        fc, two_c = _side_fluid(th, cold, 0.5 * (cold.T + c_out.T), 0.5 * (cold.P + Pc))
+    except (ValueError, TypeError) as exc:
+        raise _InputError(_error("missing_transport_properties", "unit", u.id, target=u.id)) from exc
+    tube_hot = geom.tube_side == "hot"
+    tube = hx_geometry.tube_side(fh if tube_hot else fc, geom, heating=not tube_hot)
+    shell = hx_geometry.shell_side(fc if tube_hot else fh, geom)
+    U = hx_geometry.overall_u(geom, tube["h"], shell["h"])
+    F: float | None = 1.0
+    if final:
+        F = hx_geometry.f_correction(hot.T, h_out.T, cold.T, c_out.T, geom.tube_passes)
+        if F is None:
+            raise _InputError(_error("hx_f_infeasible", "unit", u.id, target=u.id,
+                                     passes=geom.tube_passes))
+    warnings: list[Issue] = []
+    if final:
+        for name, two in (("hot", two_h), ("cold", two_c)):
+            if two:
+                warnings.append(_issue(Severity.WARNING, "geometry_two_phase", "unit", u.id,
+                                       target=u.id, side=name))
+        if F < 0.75:
+            warnings.append(_issue(Severity.WARNING, "low_f_correction", "unit", u.id,
+                                   target=u.id, f=round(F, 3)))
+    return {"u": U, "f": F, "tube": tube, "shell": shell, "warnings": warnings}
+
+
+def _rate_heat_exchanger(u, UA, hot, cold, Ph, Pc, th, zones, outlets, curves,
+                         passes: int = 1) -> float:
+    """Duty for a given UA (for 2N tube passes: zoned UA / F(end temperatures) = UA). Tabulated heat curves (T against duty, _HX_TABLE points each)
     give a cheap zoned UA(Q) for bracketing; a few exact secant steps then make the
     reported zoned UA equal the specification."""
     from scipy.optimize import brentq
 
-    UA = (u.specs["ua"].value if "ua" in u.specs
-          else u.specs["u_overall"].value * u.specs["area"].value)
     if hot.T <= cold.T:
         raise _InputError(_error("temperature_cross", "unit", u.id, target=u.id,
                                  hot_end=round(hot.T - cold.T, 2), cold_end=round(hot.T - cold.T, 2)))
@@ -1360,10 +1586,17 @@ def _rate_heat_exchanger(u, hot, cold, Ph, Pc, th, zones, outlets, curves) -> fl
         k = min(int(pos), _HX_TABLE - 2)
         return table[k] + (table[k + 1] - table[k]) * (pos - k)
 
+    def required(ua: float, t_hot_out: float, t_cold_out: float) -> float:
+        if passes == 1 or not math.isfinite(ua):
+            return ua
+        F = hx_geometry.f_correction(hot.T, t_hot_out, cold.T, t_cold_out, passes)
+        return ua / F if F else math.inf
+
     def approx(Q: float) -> float:
         qs = [Q * k / zones for k in range(zones + 1)]
-        ua, _, _ = _zone_ua(qs, [interp(tab_hot, Q - q) for q in qs], [interp(tab_cold, q) for q in qs])
-        return min(ua, 1e300) - UA
+        t_hot, t_cold = [interp(tab_hot, Q - q) for q in qs], [interp(tab_cold, q) for q in qs]
+        ua, _, _ = _zone_ua(qs, t_hot, t_cold)
+        return min(required(ua, t_hot[0], t_cold[-1]), 1e300) - UA
 
     lo = hi * 1e-9
     Q = brentq(approx, lo, hi, xtol=1e-7 * hi) if approx(hi) > 0 else hi
@@ -1372,7 +1605,7 @@ def _rate_heat_exchanger(u, hot, cold, Ph, Pc, th, zones, outlets, curves) -> fl
         ho, co = outlets(Q)
         if ho.T <= cold.T or co.T >= hot.T:
             return math.inf
-        return _zone_ua(*curves(Q, ho, co))[0] - UA
+        return required(_zone_ua(*curves(Q, ho, co))[0], ho.T, co.T) - UA
 
     # Secant refinement on the exact zoned UA (curve interpolation and pressure profile).
     q0, f0 = Q, exact(Q)
@@ -1467,7 +1700,7 @@ def _solve_shortcut_column(u, inlets, outs, th, fs):
     ratio_hk = (1 - r_hk) / r_hk  # d/b of the heavy key
     f = [feed.F * zi for zi in z]
     d = [fi * (a ** n_min * ratio_hk) / (1 + a ** n_min * ratio_hk) for fi, a in zip(f, alpha)]
-    b = [fi - di for fi, di in zip(f, d)]
+    b = [max(fi - di, 0.0) for fi, di in zip(f, d)]  # no round-off negatives (α → ∞ for gases)
     D, B = sum(d), sum(b)
     xD, xB = [di / D for di in d], [bi / B for bi in b]
 
@@ -1582,7 +1815,7 @@ def _solve_kinetic_reactor(u, inlets, outs, th, fs):
 
 
 def _solve_equilibrium_reactor(u, inlets, outs, th, fs):
-    """Gas-phase chemical equilibrium (see equilibrium.py)."""
+    """Chemical equilibrium in the gas or liquid phase (see equilibrium.py)."""
     feed = inlets["in"]
     P = _outlet_pressure(u, feed.P)
     _require_positive_pressure(u, P)
@@ -1601,9 +1834,11 @@ def _solve_equilibrium_reactor(u, inlets, outs, th, fs):
         nus.append(nu)
     flows_in = [feed.F * z for z in feed.zs]  # type: ignore[union-attr]
     H_in = feed.F * (feed.H + th.Hf(feed.zs))  # type: ignore[arg-type, operator]
+    phase = u.options.get("phase", "gas")
+    correlations = [r.get("ln_k") for r in u.options["reactions"]]
 
     def outlet(T: float) -> tuple[list[float], _State]:
-        xi = solve_equilibrium(th, nus, flows_in, P, T)
+        xi = solve_equilibrium(th, nus, flows_in, P, T, phase, correlations)
         flows = [max(f + sum(nu[i] * x for nu, x in zip(nus, xi)), 0.0) for i, f in enumerate(flows_in)]
         F = sum(flows)
         zs = [f / F for f in flows]
@@ -1627,13 +1862,20 @@ def _solve_equilibrium_reactor(u, inlets, outs, th, fs):
     results: dict[str, Any] = {}
     for k, (x, nu) in enumerate(zip(xi, nus), start=1):
         results[f"extent_{k}"] = _q(x, "mol/s")
-        results[f"equilibrium_constant_{k}"] = _q(math.exp(ln_k(th, nu, T)), "1")
+        results[f"equilibrium_constant_{k}"] = _q(
+            math.exp(phase_ln_k(th, nu, T, P, phase, correlations[k - 1])), "1")
+    issues: list[Issue] = []
+    if (phase == "liquid" and out.VF > 0.01) or (phase == "gas" and out.VF < 0.99):
+        issues.append(_issue(Severity.WARNING, "equilibrium_phase_mismatch", "unit", u.id,
+                             target=u.id, phase=phase, vapor_fraction=round(out.VF, 3)))
     results.update({
         "duty": _q(duty, "W"),
         "temperature": _q(T, "K"),
         "pressure": _q(P, "Pa"),
         "vapor_fraction": _q(out.VF, "1"),
     })
+    if issues:
+        results[_WARNINGS] = issues
     return {"out": out}, results
 
 
@@ -1646,16 +1888,25 @@ def _solve_distillation_column(u, inlets, outs, th, fs):
         raise _InputError(_error("column_empty_feed", "unit", u.id, target=u.id))
     if len(th.ids) < 2:
         raise _InputError(_error("column_needs_two_components", "unit", u.id, target=u.id))
+    D = u.specs["distillate_rate"].value
+    warnings: list[Issue] = []
+    if th.in_loop and D >= 0.99 * feed.F:  # type: ignore[operator]
+        # Inside a recycle loop the feed passes through low values while the loop converges:
+        # limit D for this pass; if it is still limited at convergence, the warning stays.
+        warnings.append(_issue(Severity.WARNING, "column_distillate_limited", "unit", u.id, target=u.id,
+                               D=round(D, 4), F=round(feed.F, 4)))  # type: ignore[arg-type]
+        D = 0.95 * feed.F  # type: ignore[operator]
     try:
         r = solve_column(th, list(feed.zs), feed.F, feed.H, P,  # type: ignore[arg-type]
                          int(u.specs["number_of_stages"].value), int(u.specs["feed_stage"].value),
-                         u.specs["reflux_ratio"].value, u.specs["distillate_rate"].value)
+                         u.specs["reflux_ratio"].value, D)
     except ColumnError as exc:
         raise _InputError(_error(exc.code, "unit", u.id, target=u.id, **exc.params)) from exc
     N = len(r.T)
     dist = _State(r.T[0], P, r.D, r.x[0], r.HL[0], 0.0)
     bott = _State(r.T[N - 1], P, r.B, r.x[N - 1], r.HL[N - 1], 0.0)
     return {"distillate": dist, "bottoms": bott}, {
+        **({_WARNINGS: warnings} if warnings else {}),
         "condenser_duty": _q(r.Qc, "W"),
         "reboiler_duty": _q(r.Qr, "W"),
         "top_temperature": _q(r.T[0], "K"),

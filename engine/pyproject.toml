@@ -1,6 +1,6 @@
 [project]
 name = "opd-engine"
-version = "0.0.1"
+version = "0.1.0"
 description = "Open Process Design engine layer: OPD format and engine adapters"
 license = { text = "GPL-3.0-or-later" }
 requires-python = ">=3.11"

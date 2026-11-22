@@ -38,7 +38,7 @@ export const UNITS: UnitDef[] = [
   { type: "valve", category: "pressure", prefix: "V", inlets: ["in"], outlets: ["out"], groups: [PRESSURE_REQUIRED], available: true },
   { type: "heat_exchanger", category: "heat", prefix: "E", inlets: ["hot_in", "cold_in"], outlets: ["hot_out", "cold_out"],
     groups: [
-      { key: "hx_spec", options: ["hot_outlet_temperature", "cold_outlet_temperature", "duty", "ua"] },
+      { key: "hx_spec", options: ["hot_outlet_temperature", "cold_outlet_temperature", "duty", "ua"], optional: true },
       { key: "hot_dp", options: ["hot_pressure_drop"], optional: true },
       { key: "cold_dp", options: ["cold_pressure_drop"], optional: true },
     ], available: true },

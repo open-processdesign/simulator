@@ -6,23 +6,25 @@ Open a link, build any flowsheet, run it, read the results — no installation, 
 **Live demo: https://open-processdesign.github.io/simulator/** — runs entirely in your browser
 (the first visit downloads about 70 MB for the calculation engine; later visits use the browser cache).
 
-> **Status:** demo (M1). Next: rigorous units (M2) and a validated v0.1 release by March 2027 (M3).
+> **Status:** v0.1 release candidate — see [CHANGELOG.md](CHANGELOG.md). Demo video: [docs/media/demo.mp4](docs/media/demo.mp4) (98 s).
 > Results are for **education and preliminary design only**. Verify them before use.
 
 ![Flowsheet of a simplified HDA process with recycle, stream table below the canvas](docs/screenshots/flowsheet.png)
 
 ## Try it
 
-1. Open the demo. Choose **File → Examples** (flash drum, benzene–toluene column, simplified HDA recycle loop), or start empty.
+1. Open the demo. Choose **File → Examples** (15 cases: flash drum, columns, reactors, heat exchangers, HDA plant, Turton's cumene and DME validation cases), or start empty.
 2. **Components:** search by name, formula or CAS number (1347 components from the MIT-licensed `chemicals` database).
-3. **Thermodynamics:** Ideal (Raoult), Peng–Robinson or SRK; see where each k_ij comes from.
+3. **Thermodynamics:** Ideal (Raoult), Peng–Robinson, SRK, NRTL or UNIQUAC; see where each binary parameter comes from, or enter your own.
 4. **Flowsheet:** drag units from the palette, connect an outlet (right) to an inlet (left), set specs in the side panel. Dots: grey = not checked, hollow green = inputs complete, amber = missing input, red = error, green = solved.
 5. **Run**, then read the stream table, unit results and messages; click a message to jump to the unit or stream.
 6. **File → Save as file** keeps the process as an `.opd.json` file you can open again or share.
 
 Units: feed, product, mixer, splitter, flash, heater/cooler, heat exchanger, valve, pump, compressor,
 conversion reactor, CSTR, PFR, equilibrium reactor, shortcut column (Fenske–Underwood–Gilliland), rigorous distillation
-column. Property methods: Ideal, Peng–Robinson, SRK, NRTL, UNIQUAC. Recycle loops converge automatically (Wegstein).
+column. Heat exchangers with zone analysis (phase change) and optional shell-and-tube geometry (Kern); equilibrium
+reactor in the gas or liquid phase. Property methods: Ideal, Peng–Robinson, SRK, NRTL, UNIQUAC. Recycle loops converge
+automatically (Wegstein).
 Unit sets SI / Metric / English; CSV export. Guides: [English](docs/USER_GUIDE.md) · [Türkçe](docs/USER_GUIDE.tr.md).
 How each model is checked: [docs/VALIDATION.md](docs/VALIDATION.md).
 

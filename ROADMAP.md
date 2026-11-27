@@ -23,7 +23,7 @@ Repo, agent rules, design system, engine-independent data format, adapter interf
 DWSIM engine service on a free/cheap host (T90–T91), shadow-compared with `reference`. Rigorous distillation column, equilibrium/PFR/CSTR reactors, shell-and-tube exchanger, component database search, unit sets (SI / metric / English), result export (CSV).
 
 ### Milestone M3 — Validated release v0.1 (target: 15 Mar 2027)
-- Validation suite: HDA (vs. maintainer's CHEMCAD case), plus 2–3 literature cases (e.g. methanol, cumene).
+- Validation suite: HDA (vs. maintainer's CHEMCAD case — done, T29), plus 2–3 literature cases (cumene, DME — done).
 - Acceptance criterion for each key result: |x_new − x_ref| / |x_ref| < ε (ε recorded per quantity in `docs/VALIDATION.md`).
 - Validated HDA template shipped in the app.
 - 2-minute demo video, user guide, contributor guide.

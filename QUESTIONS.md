@@ -4,16 +4,16 @@ Answer under each question (or in an issue). Agents: if unanswered, use the stat
 
 ## Open
 
-**Q2 · Branch protection on `main`.** Please enable in GitHub → Settings → Branches: require a pull request, 1 approval, passing checks.
-Default: agents never push to `main` anyway.
-
-**Q3 · Product name.** Working name "Open Process Design" (repo `simulator`). Keep it?
-Default: keep.
-
-**Q8 · HDA CHEMCAD case (M3 validation).** Please export from CHEMCAD for your HDA design case: the stream table (T, P, vapour fraction, component flows for every stream) and the unit specifications (reactor conversion/T/P, flash conditions, purge fraction, column stages/reflux/keys, thermo method). The template `examples/hda-benzene-plant-template.opd.json` will be adapted to it and tested.
-Default: until then the template stays a plausibility case (docs/VALIDATION.md).
+**Q9 · HDA column specifications (optional).** The CHEMCAD stream table does not include the column settings. If you send stages, feed stage, reflux ratio and condenser/reboiler duties of columns 15 and 16 (and the thermo method, to confirm SRK), the HDA case can use rigorous columns and compare their duties.
+Default: FUG shortcut columns with the key recoveries from the stream table (docs/VALIDATION.md).
 
 ## Answered
+
+**Q8 · HDA CHEMCAD case.** Stream table received 2026-11-27 (CHEMCAD 8.1, 25 streams). → `examples/hda-chemcad-validation.opd.json`, `engine/tests/test_hda_chemcad.py`, D033.
+
+**Q3 · Product name.** Answer (2026-11-27, Berkay): keep "Open Process Design".
+
+**Q2 · Branch protection on `main`.** Answer (2026-11-27, Berkay): enable it. A classic branch protection rule for `main` (pull request, 1 approval, `test` check passing) was filled in by Claude in the browser; Berkay confirms it with his password (GitHub sudo mode). Admins may bypass, because agent PRs are opened under the maintainer's account and GitHub does not let an author approve his own PR.
 
 **Q6 · GitHub Pages.** Done 2026-11-21 (Source: GitHub Actions); the demo is live at https://open-processdesign.github.io/simulator/.
 

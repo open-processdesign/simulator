@@ -181,3 +181,9 @@ Template:
 - Tests: no code changes.
 - PR: agent/T28-close-out.
 - Next / blockers: HDA vs CHEMCAD validation (Q8); T90 DWSIM spike needs a host (D012).
+
+## 2026-11-27 — Claude (maintainer-requested session) — T29, Q2, Q3, Q8
+- Done: CHEMCAD HDA stream table → `engine/tests/data/hda_chemcad_case.json`; example `hda-chemcad-validation` (CHEMCAD numbering, SRK, both recycles); shortcut column `condenser_temperature` and `pressure_drop` (engine, UI, EN/TR); fixes: NaN for absent components in FUG, supercritical light gases reported as vapour; VALIDATION section, D033, Q2/Q3/Q8 answered, Q9 added. Branch protection rule for `main` filled in via the browser, waiting for Berkay's password confirmation.
+- Tests: engine 230 passed (new `test_hda_chemcad.py`, `test_column_options.py`); web 56 passed; all 14 examples solve in Pyodide (HDA CHEMCAD case 6.6 s).
+- PR: agent/T29-hda-chemcad.
+- Next / blockers: optional Q9 (column settings) for rigorous HDA columns; T90 DWSIM spike needs a host (D012).

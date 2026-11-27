@@ -425,7 +425,7 @@ class _Thermo:
     def split_phases(res: Any) -> tuple[_State | None, _State | None]:
         """(vapour, liquid) states per mole of feed from a flash result; None if absent."""
         vf = _vapor_fraction(res)
-        gas = res.gas if vf > 0 else None
+        gas = (res.liquid0 if _supercritical(res) else res.gas) if vf > 0 else None
         liq = res.liquid0 if vf < 1 else None
         T, P = res.T, res.P
         vap_state = _State(T, P, vf, list(gas.zs), gas.H(), 1.0) if gas is not None else None
@@ -570,7 +570,24 @@ class _PureResult:
         return getattr(self._res, name)
 
 
+def _supercritical(res: Any) -> bool:
+    """True for a single phase that `thermo` labels liquid although T is above the mixture's
+    pseudo-critical temperature (Kay's rule, T_pc = Σ z_i T_c,i), e.g. H2/CH4 after a
+    compressor. Such a fluid is reported as vapour, as commercial simulators do."""
+    inner = res._res if isinstance(res, _PureResult) else res
+    liquids = list(getattr(res, "liquids", None) or [])
+    if getattr(res, "gas", None) is not None or len(liquids) != 1:
+        return False
+    try:
+        tcs, zs = inner.constants.Tcs, inner.zs
+        return len(tcs) == len(zs) and res.T > sum(z * tc for z, tc in zip(zs, tcs))
+    except (AttributeError, TypeError):
+        return False
+
+
 def _vapor_fraction(res: Any) -> float:
+    if _supercritical(res):
+        return 1.0
     vf = res.VF
     if vf is None or (isinstance(vf, float) and math.isnan(vf)):
         return 1.0 if res.gas is not None and res.liquid0 is None else 0.0
@@ -980,6 +997,12 @@ def _check_unit(u: Unit, ins: dict[str, str], outs: dict[str, str],
             if name in u.specs and not 0 < u.specs[name].value < 1:
                 issues.append(_error("out_of_range", "unit", u.id, target=u.id, spec=name,
                                      min=0, max=1))
+        if "pressure_drop" in u.specs and u.specs["pressure_drop"].value < 0:
+            issues.append(_error("out_of_range", "unit", u.id, target=u.id,
+                                 spec="pressure_drop", min=0, max=None))
+        if "condenser_temperature" in u.specs and u.specs["condenser_temperature"].value <= 0:
+            issues.append(_error("out_of_range", "unit", u.id, target=u.id,
+                                 spec="condenser_temperature", min=0, max=None))
         if "reflux_ratio_factor" in u.specs and u.specs["reflux_ratio_factor"].value <= 1:
             issues.append(_error("out_of_range", "unit", u.id, target=u.id,
                                  spec="reflux_ratio_factor", min=1, max=None))
@@ -1670,6 +1693,13 @@ def _solve_conversion_reactor(u, inlets, outs, th, fs):
 def _solve_shortcut_column(u, inlets, outs, th, fs):
     """Fenske–Underwood–Gilliland shortcut design with a total condenser.
 
+    Optional `condenser_temperature`: the distillate leaves the condenser at this temperature
+    (sub-cooled, or two-phase for a partial condenser when it carries light gases — route it
+    through a flash drum to split vapour and liquid distillate). The condenser duty is then
+    (R + 1)·D·(h(T_c) − h_dew), i.e. the reflux is returned at the drum state.
+    Optional `pressure_drop`: `pressure` is then the top pressure, the bottoms leave at
+    pressure + pressure_drop, and volatilities and the feed condition use the mean pressure.
+
     Constant relative volatilities α_i = K_i/K_HK from a flash of the feed composition at
     column pressure and vapour fraction 0.5; Fenske for N_min and non-key distribution;
     Underwood (one root between the keys) for R_min; Gilliland's correlation in the form of
@@ -1677,7 +1707,9 @@ def _solve_shortcut_column(u, inlets, outs, th, fs):
     Roper, *Separation Process Principles*, 3rd ed., Wiley (2011), ch. 9.
     """
     feed = inlets["in"]
-    P = u.specs["pressure"].value if "pressure" in u.specs else feed.P
+    P = u.specs["pressure"].value if "pressure" in u.specs else feed.P  # top (condenser)
+    dP = u.specs["pressure_drop"].value if "pressure_drop" in u.specs else 0.0
+    P_b, P_m = P + dP, P + dP / 2  # bottoms (reboiler) and mean column pressure
     _require_positive_pressure(u, P)
     if feed.F <= _ZERO_FLOW:
         raise _InputError(_error("column_empty_feed", "unit", u.id, target=u.id))
@@ -1687,7 +1719,7 @@ def _solve_shortcut_column(u, inlets, outs, th, fs):
     r_lk, r_hk = u.specs["lk_recovery"].value, u.specs["hk_recovery"].value
     factor = u.specs["reflux_ratio_factor"].value
 
-    mid = th.flash_raw(z, P=P, VF=0.5)
+    mid = th.flash_raw(z, P=P_m, VF=0.5)
     if mid.gas is None or mid.liquid0 is None:
         raise _InputError(_error("column_no_two_phase", "unit", u.id, target=u.id))
     K = [y / x if x > 0 else math.inf for y, x in zip(mid.gas.zs, mid.liquid0.zs)]
@@ -1699,13 +1731,21 @@ def _solve_shortcut_column(u, inlets, outs, th, fs):
     n_min = math.log((r_lk / (1 - r_lk)) * (r_hk / (1 - r_hk))) / math.log(alpha[lk])
     ratio_hk = (1 - r_hk) / r_hk  # d/b of the heavy key
     f = [feed.F * zi for zi in z]
-    d = [fi * (a ** n_min * ratio_hk) / (1 + a ** n_min * ratio_hk) for fi, a in zip(f, alpha)]
+    def overhead(fi: float, a: float) -> float:
+        if fi <= 0:
+            return 0.0  # absent component (α may be inf or nan here)
+        if math.isinf(a):
+            return fi  # non-condensable at column conditions: all overhead
+        s = a ** n_min * ratio_hk
+        return fi if math.isinf(s) else fi * s / (1 + s)
+
+    d = [overhead(fi, a) for fi, a in zip(f, alpha)]
     b = [max(fi - di, 0.0) for fi, di in zip(f, d)]  # no round-off negatives (α → ∞ for gases)
     D, B = sum(d), sum(b)
     xD, xB = [di / D for di in d], [bi / B for bi in b]
 
     # Feed thermal condition q (liquid fraction after letdown to column pressure).
-    q = 1 - th.flash(z, P=P, H=feed.H).VF  # type: ignore[arg-type, operator]
+    q = 1 - th.flash(z, P=P_m, H=feed.H).VF  # type: ignore[arg-type, operator]
 
     # Underwood: Σ α_i z_i / (α_i − θ) = 1 − q with 1 < θ < α_LK (bisection).
     def underwood(theta: float) -> float:
@@ -1718,7 +1758,7 @@ def _solve_shortcut_column(u, inlets, outs, th, fs):
             hi = theta
         else:
             lo = theta
-    r_min = sum(a * x / (a - theta) for a, x in zip(alpha, xD)) - 1
+    r_min = sum(a * x / (a - theta) for a, x in zip(alpha, xD) if x > 0) - 1
     if r_min <= 0:
         raise _InputError(_error("column_rmin_invalid", "unit", u.id, target=u.id))
     R = factor * r_min
@@ -1732,8 +1772,17 @@ def _solve_shortcut_column(u, inlets, outs, th, fs):
     ratio = ((z[hk] / z[lk]) * (xB[lk] / xD[hk]) ** 2 * (B / D)) ** 0.206
     feed_stage = n * ratio / (1 + ratio)
 
-    dist = th.flash(xD, P=P, VF=0.0)
-    bott = th.flash(xB, P=P, VF=0.0)
+    if "condenser_temperature" in u.specs:
+        # Condenser at a given temperature (e.g. a partial condenser with a reflux drum): the
+        # distillate leaves at that T and may be two-phase; the reflux is taken at the same state.
+        dist = th.flash(xD, T=u.specs["condenser_temperature"].value, P=P)
+    else:
+        try:
+            dist = th.flash(xD, P=P, VF=0.0)
+        except Exception as exc:  # noqa: BLE001 — e.g. dissolved H2/CH4: no bubble point at P
+            raise _InputError(_error("column_distillate_not_condensable", "unit", u.id,
+                                     target=u.id)) from exc
+    bott = th.flash(xB, P=P_b, VF=0.0)
     dew = th.flash(xD, P=P, VF=1.0)
     q_cond = -(R + 1) * D * (dew.H - dist.H)  # type: ignore[operator]
     q_reb = D * dist.H + B * bott.H - feed.F * feed.H - q_cond  # type: ignore[operator]

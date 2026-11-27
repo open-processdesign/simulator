@@ -1,7 +1,8 @@
 """HDA plant vs. the maintainer's CHEMCAD 8.1 case (M3 validation, QUESTIONS Q8).
 
 `examples/hda-chemcad-validation.opd.json` rebuilds the CHEMCAD flowsheet (same stream and
-equipment numbers) with SRK. Its specifications are read from the CHEMCAD stream table in
+equipment numbers) with SRK; CHEMCAD's two reactors in series (6 and 7) are one reactor with
+both reactions, so stream 8 does not exist here. Its specifications are read from the CHEMCAD stream table in
 `tests/data/hda_chemcad_case.json`; the engine then has to reproduce the remaining numbers:
 recycle flows, phase splits, temperatures after mixing and let-down, and the duties (taken from
 CHEMCAD's stream enthalpies, which are on a heat-of-formation basis like the engine's reactor
@@ -60,7 +61,7 @@ def test_recycles_converge_and_atoms_balance(plant):
 
 # Process streams: total flow within 0.5 %. The light-ends streams 17/18 and 25 (2 and 0.08
 # kmol/h of dissolved H2/CH4) depend on gas solubilities and are checked separately.
-@pytest.mark.parametrize("sid", ["6", "8", "10", "11", "12", "13", "14", "15", "16", "19", "20", "21", "22", "23", "24"])
+@pytest.mark.parametrize("sid", ["6", "9", "10", "11", "12", "13", "14", "15", "16", "19", "20", "21", "22", "23", "24"])
 def test_stream_flows(plant, sid):
     assert _kmol_h(plant, sid) == pytest.approx(REF[sid]["molar_flow_kmol_h"], rel=5e-3)
 
@@ -89,7 +90,7 @@ def test_vapour_fractions(plant, sid):
 # Duties from CHEMCAD's enthalpies: ΔH between the unit's outlet and inlet streams.
 @pytest.mark.parametrize("unit, result, inlet, outlet, rel", [
     ("E-5", "duty", "6", "7", 0.01),
-    ("R-6", "duty", "7", "8", 0.01),
+    ("R-6", "duty", "7", "9", 0.01),  # CHEMCAD units 6 + 7
     ("E-8", "duty", "9", "10", 0.01),
     ("K-2", "power", "1", "2", 0.01),
     ("P-1", "power", "3", "4", 0.01),
@@ -107,3 +108,14 @@ def test_benzene_product(plant):
     assert benzene_kg_h == pytest.approx(REF["20"]["component_flows_kg_h"]["benzene"], rel=5e-3)
     chemcad_purity = (REF["20"]["component_flows_kg_h"]["benzene"] / 78.11) / REF["20"]["molar_flow_kmol_h"]
     assert s["mole_fractions"]["benzene"] == pytest.approx(chemcad_purity, abs=5e-4)
+
+
+HP = 745.69987  # W
+
+
+@pytest.mark.parametrize("unit, chemcad_hp", [("K-2", 419.638), ("K-11", 2.59608)])
+def test_compressor_powers_from_the_chemcad_dialogs(plant, unit, chemcad_hp):
+    # Actual power in CHEMCAD's compressor dialogs (maintainer's screen recording, 2026-11-27).
+    # For unit 11 the stream-table enthalpies resolve the power only to about ±7 %.
+    engine = plant.document["results"]["units"][unit]["power"]["value"]
+    assert engine == pytest.approx(chemcad_hp * HP, rel=0.01)

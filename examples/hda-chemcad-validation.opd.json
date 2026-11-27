@@ -2,7 +2,7 @@
  "format": "opd-flowsheet",
  "version": "0.1",
  "name": "HDA benzene plant — CHEMCAD-validated case",
- "description": "Toluene hydrodealkylation with gas and toluene recycles, rebuilt from the maintainer's CHEMCAD 8.1 design case (KMM4125 design project; stream and equipment numbers as in CHEMCAD). Specifications (temperatures, pressures, 75 % toluene conversion, 2 % benzene to biphenyl, 15 % purge, column key recoveries) are read from the CHEMCAD stream table; pump efficiencies are back-calculated from its enthalpies. The columns are FUG shortcut designs with a reflux drum at 50 °C for the benzene column. The two recycle streams carry rounded start estimates. Property method SRK, which reproduces the CHEMCAD stream table best (PR was tested too). See docs/VALIDATION.md.",
+ "description": "Toluene hydrodealkylation with gas and toluene recycles, rebuilt from the maintainer's CHEMCAD 8.1 design case (KMM4125 design project; stream and equipment numbers as in CHEMCAD). CHEMCAD models the reactor as two stoichiometric reactors in series (units 6 and 7, stream 8 between them); here it is one reactor with both reactions, as in the design drawing. Specifications (temperatures, pressures, 75 % toluene conversion, 2 % benzene to biphenyl in the same reactor, 15 % purge, column key recoveries) are read from the CHEMCAD stream table; pump efficiencies are back-calculated from its enthalpies. The columns are FUG shortcut designs with a reflux drum at 50 °C for the benzene column. The two recycle streams carry rounded start estimates. Property method SRK, which reproduces the CHEMCAD stream table best (PR was tested too). See docs/VALIDATION.md.",
  "components": [
   {
    "id": "hydrogen",
@@ -107,7 +107,7 @@
   {
    "id": "R-6",
    "type": "conversion_reactor",
-   "label": "6 · HDA reactor (isothermal)",
+   "label": "6 · HDA reactor (isothermal, main and side reaction)",
    "specs": {
     "temperature": {
      "value": 893.15,
@@ -129,26 +129,7 @@
       },
       "key": "toluene",
       "conversion": 0.75
-     }
-    ]
-   }
-  },
-  {
-   "id": "R-7",
-   "type": "conversion_reactor",
-   "label": "7 · Biphenyl side reaction (isothermal)",
-   "specs": {
-    "temperature": {
-     "value": 893.15,
-     "unit": "K"
-    },
-    "pressure_drop": {
-     "value": 0.0,
-     "unit": "Pa"
-    }
-   },
-   "options": {
-    "reactions": [
+     },
      {
       "stoichiometry": {
        "benzene": -2,
@@ -497,20 +478,9 @@
    }
   },
   {
-   "id": "S8",
-   "from": {
-    "unit": "R-6",
-    "port": "out"
-   },
-   "to": {
-    "unit": "R-7",
-    "port": "in"
-   }
-  },
-  {
    "id": "S9",
    "from": {
-    "unit": "R-7",
+    "unit": "R-6",
     "port": "out"
    },
    "to": {
@@ -778,11 +748,7 @@
    "y": 160
   },
   "R-6": {
-   "x": 820,
-   "y": 160
-  },
-  "R-7": {
-   "x": 980,
+   "x": 900,
    "y": 160
   },
   "E-8": {

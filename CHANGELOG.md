@@ -2,6 +2,12 @@
 
 All notable changes. Versions follow [Semantic Versioning](https://semver.org/); dates are UTC.
 
+## [Unreleased]
+
+### Changed
+- HDA CHEMCAD example: one reactor with both reactions, as in the design drawing (CHEMCAD uses
+  two in series); compressor powers checked against the CHEMCAD dialogs (within 0.2 %).
+
 ## [0.1.1] — 2026-11-27
 
 ### Added

@@ -6,7 +6,7 @@ Answer under each question (or in an issue). Agents: if unanswered, use the stat
 
 **Q9 · HDA column specifications (optional).** The CHEMCAD stream table does not include the column settings. If you send stages, feed stage, reflux ratio and condenser/reboiler duties of columns 15 and 16 (and the thermo method, to confirm SRK), the HDA case can use rigorous columns and compare their duties.
 Default: FUG shortcut columns with the key recoveries from the stream table (docs/VALIDATION.md).
-Answer (2026-11-27, Berkay): will send a screen recording of the CHEMCAD settings.
+Answer (2026-11-27, Berkay): screen recording received. It shows column 15 (SCDS, partial condenser, 25 stages, feed stage 12, top 2 bar, column ΔP 0.1 bar) but not its *Specifications* tab (reflux / product specs), and column 16 is not opened. Still needed: those two. The reactor is one unit in the design drawing (CHEMCAD uses two in series) → the example now has one reactor with both reactions.
 
 ## Answered
 

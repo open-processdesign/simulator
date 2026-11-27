@@ -193,3 +193,9 @@ Template:
 - Tests: no engine logic changes.
 - PR: agent/T30-guide-v0.1.1.
 - Next / blockers: Q9 (CHEMCAD column settings; maintainer will send a screen recording); T90 DWSIM needs a host.
+
+## 2026-11-27 — Claude (maintainer-requested session) — T31
+- Done: HDA example with one reactor (two reactions) as in the design drawing; values from the maintainer's CHEMCAD screen recording (reactor specs, efficiencies, compressor powers, column 15 layout) in VALIDATION; D034; Q9 narrowed (column 15 specifications tab and column 16 still missing).
+- Tests: engine `test_hda_chemcad.py` 40 passed (K-2 and K-11 power vs dialog values within 0.2 %).
+- PR: agent/T31-hda-single-reactor.
+- Next / blockers: Q9 rest; T90 DWSIM needs a host.

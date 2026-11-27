@@ -91,13 +91,16 @@ on the Thermodynamics page to close it.
 Source: stream table "CHEMCAD-SON (1)" of the maintainer's KMM4125 design project (CHEMCAD 8.1.0,
 exported 2026-11-26), stored as `engine/tests/data/hda_chemcad_case.json`. Example
 `hda-chemcad-validation` rebuilds the flowsheet with CHEMCAD's stream and equipment numbers:
-feed compressor and pump, two mixers, fired heater, isothermal reactors at 620 °C (75 % toluene
-conversion; 2 % of the benzene to biphenyl), cooler, flash at 38 °C / 31.8 bar, 15 % purge,
+feed compressor and pump, two mixers, fired heater, one isothermal reactor at 620 °C with two
+reactions (75 % toluene conversion, then 2 % of the benzene to biphenyl — CHEMCAD models this as
+two stoichiometric reactors in series, units 6 and 7), cooler, flash at 38 °C / 31.8 bar, 15 % purge,
 recycle compressor, let-down valve, flash at 2 bar, benzene column (top 2.0 bar, bottom 2.1 bar,
 condenser at 50 °C with a drum for the off-gas, stream 25) and toluene column, recycle pump.
 
-Specifications come from the stream table (T, P, conversions, purge fraction, key recoveries);
-pump and compressor efficiencies of 0.75 match CHEMCAD's enthalpies. Columns are FUG shortcuts,
+Specifications come from the stream table (T, P, purge fraction, key recoveries) and the
+maintainer's screen recording of the CHEMCAD dialogs (reactor conversions and stoichiometry,
+efficiencies 0.75, benzene column: partial condenser, 25 stages, feed on stage 12, top 2 bar,
+column ΔP 0.1 bar). Columns are FUG shortcuts,
 so CHEMCAD's column duties (not in the table) are not compared. Duties below are CHEMCAD stream
 enthalpy differences (heat-of-formation basis, like the engine's reactor balance). Property
 method: SRK. With PR the engine gives 0.6 % more recycle gas, 10 % more benzene in it and 25 %
@@ -119,13 +122,13 @@ with SRK. Both recycles converge
 | Column 16 distillate, Stream 23 | 136.54 °C | 136.50 °C | −0.04 K | 0.2 K |
 | H2 compressor outlet, Stream 2 | 654.01 °C | 652.71 °C | −1.3 K | 2 K |
 | Fired heater E-5 duty | 3818 kW | 3830 kW | +0.31 % | 1 % |
-| Reactor R-6 heat removed | 409.7 kW | 406.8 kW | −0.70 % | 1 % |
+| Reactor R-6 heat removed (CHEMCAD units 6 + 7) | 407.4 kW | 404.5 kW | −0.71 % | 1 % |
 | Cooler E-8 duty | 4060 kW | 4070 kW | +0.26 % | 1 % |
-| H2 compressor K-2 power | 312.9 kW | 312.6 kW | −0.10 % | 1 % |
+| H2 compressor K-2 power (dialog: 419.638 hp) | 312.9 kW | 312.6 kW | −0.09 % | 1 % |
+| Recycle compressor K-11 power (dialog: 2.59608 hp) | 1.936 kW | 1.933 kW | −0.17 % | 1 % |
 | Pumps P-1 / P-17 power | 3.64 / 1.29 kW | 3.64 / 1.29 kW | +0.15 / −0.20 % | 1 % |
 | Light ends, Stream 17 | 2.077 kmol/h | 2.158 kmol/h | +3.9 % | 6 % |
 | Column off-gas, Stream 25 | 0.076 kmol/h | 0.072 kmol/h | −5.5 % | 8 % |
-| Recycle compressor K-11 power | 2.05 kW | 1.93 kW | −5.8 % | not tested — below the table's print resolution (±0.0005 MMBtu/h ≈ ±0.15 kW) |
 
 Streams 17 and 25 carry only the H2 and CH4 dissolved in the liquid (2 and 0.08 kmol/h); they
 depend on gas solubilities, i.e. on the SRK binary parameters, which CHEMCAD and the ChemSep
@@ -153,6 +156,6 @@ numbers as native CPython (flash-drum S2 x_benzene 0.6211 in both).
 
 ## Next (M3)
 
-1. Done: HDA vs. the maintainer's CHEMCAD case (`hda-chemcad-validation`, above). Open: CHEMCAD's column specifications (stages, reflux) to compare a rigorous column and its duties.
+1. Done: HDA vs. the maintainer's CHEMCAD case (`hda-chemcad-validation`, above). Open: the benzene column's *Specifications* tab (reflux or distillate spec) and the toluene column's settings, to compare rigorous columns and their duties (QUESTIONS Q9).
 2. Done: cumene (Unit 800) and DME (Unit 200) from Turton's published CHEMCAD tables (above).
 3. Record agreed ε values here and keep them as test tolerances.

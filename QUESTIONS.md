@@ -6,6 +6,7 @@ Answer under each question (or in an issue). Agents: if unanswered, use the stat
 
 **Q9 · HDA column specifications (optional).** The CHEMCAD stream table does not include the column settings. If you send stages, feed stage, reflux ratio and condenser/reboiler duties of columns 15 and 16 (and the thermo method, to confirm SRK), the HDA case can use rigorous columns and compare their duties.
 Default: FUG shortcut columns with the key recoveries from the stream table (docs/VALIDATION.md).
+Answer (2026-11-27, Berkay): will send a screen recording of the CHEMCAD settings.
 
 ## Answered
 

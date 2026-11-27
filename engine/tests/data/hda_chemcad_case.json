@@ -1,0 +1,387 @@
+{
+ "source": "CHEMCAD 8.1.0 stream table 'CHEMCAD-SON (1)', maintainer's HDA design case (KMM4125 design project), exported 2026-11-26. Values as printed (4\u20135 significant digits). Enthalpy basis: CHEMCAD (ideal-gas heat of formation at 25 \u00b0C).",
+ "units": {
+  "temperature": "degC",
+  "pressure": "bar",
+  "flow": "kmol/h",
+  "component_flows": "kg/h",
+  "enthalpy": "MMBtu/h"
+ },
+ "streams": {
+  "1": {
+   "component_flows_kg_h": {
+    "hydrogen": 111.9374,
+    "methane": 46.9258,
+    "toluene": 0.0,
+    "benzene": 0.0,
+    "biphenyl": 0.0
+   },
+   "molar_flow_kmol_h": 58.455,
+   "mass_flow_kg_h": 158.8631,
+   "temperature_C": 25.0,
+   "pressure_bar": 1.013,
+   "vapor_fraction": 1.0,
+   "enthalpy_MMBtu_h": -0.20751
+  },
+  "2": {
+   "component_flows_kg_h": {
+    "hydrogen": 111.9374,
+    "methane": 46.9258,
+    "toluene": 0.0,
+    "benzene": 0.0,
+    "biphenyl": 0.0
+   },
+   "molar_flow_kmol_h": 58.455,
+   "mass_flow_kg_h": 158.8631,
+   "temperature_C": 654.0126,
+   "pressure_bar": 32.0,
+   "vapor_fraction": 1.0,
+   "enthalpy_MMBtu_h": 0.86026
+  },
+  "3": {
+   "component_flows_kg_h": {
+    "hydrogen": 0.0,
+    "methane": 0.0,
+    "toluene": 2736.5879,
+    "benzene": 0.0,
+    "biphenyl": 0.0
+   },
+   "molar_flow_kmol_h": 29.7,
+   "mass_flow_kg_h": 2736.5879,
+   "temperature_C": 25.0,
+   "pressure_bar": 1.013,
+   "vapor_fraction": 0.0,
+   "enthalpy_MMBtu_h": 0.33863
+  },
+  "4": {
+   "component_flows_kg_h": {
+    "hydrogen": 0.0,
+    "methane": 0.0,
+    "toluene": 2736.5879,
+    "benzene": 0.0,
+    "biphenyl": 0.0
+   },
+   "molar_flow_kmol_h": 29.7,
+   "mass_flow_kg_h": 2736.5879,
+   "temperature_C": 26.1028,
+   "pressure_bar": 32.0,
+   "vapor_fraction": 0.0,
+   "enthalpy_MMBtu_h": 0.35104
+  },
+  "5": {
+   "component_flows_kg_h": {
+    "hydrogen": 111.9374,
+    "methane": 46.9258,
+    "toluene": 2736.5879,
+    "benzene": 0.0,
+    "biphenyl": 0.0
+   },
+   "molar_flow_kmol_h": 88.155,
+   "mass_flow_kg_h": 2895.4509,
+   "temperature_C": 155.0434,
+   "pressure_bar": 32.0,
+   "vapor_fraction": 0.7396,
+   "enthalpy_MMBtu_h": 1.2113
+  },
+  "6": {
+   "component_flows_kg_h": {
+    "hydrogen": 409.7677,
+    "methane": 2832.3347,
+    "toluene": 3634.6833,
+    "benzene": 189.2038,
+    "biphenyl": 0.5015
+   },
+   "molar_flow_kmol_h": 421.6968,
+   "mass_flow_kg_h": 7066.4907,
+   "temperature_C": 89.604,
+   "pressure_bar": 32.0,
+   "vapor_fraction": 0.9181,
+   "enthalpy_MMBtu_h": -10.537
+  },
+  "7": {
+   "component_flows_kg_h": {
+    "hydrogen": 409.7671,
+    "methane": 2832.3118,
+    "toluene": 3634.6833,
+    "benzene": 189.2027,
+    "biphenyl": 0.5015
+   },
+   "molar_flow_kmol_h": 421.695,
+   "mass_flow_kg_h": 7066.4658,
+   "temperature_C": 620.0,
+   "pressure_bar": 31.9,
+   "vapor_fraction": 1.0,
+   "enthalpy_MMBtu_h": 2.4918
+  },
+  "8": {
+   "component_flows_kg_h": {
+    "hydrogen": 350.1292,
+    "methane": 3306.9473,
+    "toluene": 908.671,
+    "benzene": 2500.2231,
+    "biphenyl": 0.5015
+   },
+   "molar_flow_kmol_h": 421.695,
+   "mass_flow_kg_h": 7066.4717,
+   "temperature_C": 620.0,
+   "pressure_bar": 31.9,
+   "vapor_fraction": 1.0,
+   "enthalpy_MMBtu_h": 1.0939
+  },
+  "9": {
+   "component_flows_kg_h": {
+    "hydrogen": 350.7744,
+    "methane": 3306.9473,
+    "toluene": 908.671,
+    "benzene": 2450.2185,
+    "biphenyl": 49.8604
+   },
+   "molar_flow_kmol_h": 421.6951,
+   "mass_flow_kg_h": 7066.4717,
+   "temperature_C": 620.0,
+   "pressure_bar": 31.9,
+   "vapor_fraction": 1.0,
+   "enthalpy_MMBtu_h": 1.1018
+  },
+  "10": {
+   "component_flows_kg_h": {
+    "hydrogen": 350.7744,
+    "methane": 3306.9473,
+    "toluene": 908.671,
+    "benzene": 2450.2185,
+    "biphenyl": 49.8604
+   },
+   "molar_flow_kmol_h": 421.6951,
+   "mass_flow_kg_h": 7066.4717,
+   "temperature_C": 38.0,
+   "pressure_bar": 31.8,
+   "vapor_fraction": 0.9041,
+   "enthalpy_MMBtu_h": -12.75
+  },
+  "11": {
+   "component_flows_kg_h": {
+    "hydrogen": 0.3858,
+    "methane": 29.9957,
+    "toluene": 879.1201,
+    "benzene": 2227.854,
+    "biphenyl": 49.8566
+   },
+   "molar_flow_kmol_h": 40.446,
+   "mass_flow_kg_h": 3187.2119,
+   "temperature_C": 38.0,
+   "pressure_bar": 31.8,
+   "vapor_fraction": 0.0,
+   "enthalpy_MMBtu_h": 1.4156
+  },
+  "12": {
+   "component_flows_kg_h": {
+    "hydrogen": 350.3886,
+    "methane": 3276.9517,
+    "toluene": 29.5511,
+    "benzene": 222.3649,
+    "biphenyl": 0.0038
+   },
+   "molar_flow_kmol_h": 381.249,
+   "mass_flow_kg_h": 3879.2603,
+   "temperature_C": 38.0,
+   "pressure_bar": 31.8,
+   "vapor_fraction": 1.0,
+   "enthalpy_MMBtu_h": -14.166
+  },
+  "13": {
+   "component_flows_kg_h": {
+    "hydrogen": 297.8303,
+    "methane": 2785.4089,
+    "toluene": 25.1184,
+    "benzene": 189.0102,
+    "biphenyl": 0.0032
+   },
+   "molar_flow_kmol_h": 324.0617,
+   "mass_flow_kg_h": 3297.3708,
+   "temperature_C": 38.0,
+   "pressure_bar": 31.8,
+   "vapor_fraction": 1.0,
+   "enthalpy_MMBtu_h": -12.041
+  },
+  "14": {
+   "component_flows_kg_h": {
+    "hydrogen": 52.5583,
+    "methane": 491.5427,
+    "toluene": 4.4327,
+    "benzene": 33.3547,
+    "biphenyl": 0.0006
+   },
+   "molar_flow_kmol_h": 57.1873,
+   "mass_flow_kg_h": 581.8889,
+   "temperature_C": 38.0,
+   "pressure_bar": 31.8,
+   "vapor_fraction": 1.0,
+   "enthalpy_MMBtu_h": -2.1249
+  },
+  "15": {
+   "component_flows_kg_h": {
+    "hydrogen": 297.8303,
+    "methane": 2785.4089,
+    "toluene": 25.1184,
+    "benzene": 189.0102,
+    "biphenyl": 0.0032
+   },
+   "molar_flow_kmol_h": 324.0617,
+   "mass_flow_kg_h": 3297.3708,
+   "temperature_C": 38.655,
+   "pressure_bar": 32.0,
+   "vapor_fraction": 1.0,
+   "enthalpy_MMBtu_h": -12.034
+  },
+  "16": {
+   "component_flows_kg_h": {
+    "hydrogen": 0.3858,
+    "methane": 29.9957,
+    "toluene": 879.1201,
+    "benzene": 2227.854,
+    "biphenyl": 49.8566
+   },
+   "molar_flow_kmol_h": 40.446,
+   "mass_flow_kg_h": 3187.2119,
+   "temperature_C": 37.4294,
+   "pressure_bar": 2.0,
+   "vapor_fraction": 0.0512,
+   "enthalpy_MMBtu_h": 1.4156
+  },
+  "17": {
+   "component_flows_kg_h": {
+    "hydrogen": 0.3813,
+    "methane": 27.1027,
+    "toluene": 1.756,
+    "benzene": 14.0262,
+    "biphenyl": 0.0002
+   },
+   "molar_flow_kmol_h": 2.0772,
+   "mass_flow_kg_h": 43.2664,
+   "temperature_C": 38.0,
+   "pressure_bar": 2.0,
+   "vapor_fraction": 1.0,
+   "enthalpy_MMBtu_h": -0.10391
+  },
+  "18": {
+   "component_flows_kg_h": {
+    "hydrogen": 0.3813,
+    "methane": 27.1027,
+    "toluene": 1.756,
+    "benzene": 14.0262,
+    "biphenyl": 0.0002
+   },
+   "molar_flow_kmol_h": 2.0772,
+   "mass_flow_kg_h": 43.2664,
+   "temperature_C": 38.0,
+   "pressure_bar": 2.0,
+   "vapor_fraction": 1.0,
+   "enthalpy_MMBtu_h": -0.10391
+  },
+  "19": {
+   "component_flows_kg_h": {
+    "hydrogen": 0.0045,
+    "methane": 2.893,
+    "toluene": 877.3641,
+    "benzene": 2213.8276,
+    "biphenyl": 49.8564
+   },
+   "molar_flow_kmol_h": 38.3688,
+   "mass_flow_kg_h": 3143.9458,
+   "temperature_C": 38.0,
+   "pressure_bar": 2.0,
+   "vapor_fraction": 0.0,
+   "enthalpy_MMBtu_h": 1.5225
+  },
+  "20": {
+   "component_flows_kg_h": {
+    "hydrogen": 0.0009,
+    "methane": 1.9299,
+    "toluene": 4.386,
+    "benzene": 2212.5273,
+    "biphenyl": 0.0
+   },
+   "molar_flow_kmol_h": 28.4927,
+   "mass_flow_kg_h": 2218.8442,
+   "temperature_C": 50.0,
+   "pressure_bar": 2.0,
+   "vapor_fraction": 0.0,
+   "enthalpy_MMBtu_h": 1.4054
+  },
+  "21": {
+   "component_flows_kg_h": {
+    "hydrogen": 0.0,
+    "methane": 0.0,
+    "toluene": 872.9773,
+    "benzene": 0.1936,
+    "biphenyl": 49.8564
+   },
+   "molar_flow_kmol_h": 9.8001,
+   "mass_flow_kg_h": 923.0273,
+   "temperature_C": 139.9494,
+   "pressure_bar": 2.1,
+   "vapor_fraction": 0.0,
+   "enthalpy_MMBtu_h": 0.33088
+  },
+  "22": {
+   "component_flows_kg_h": {
+    "hydrogen": 0.0,
+    "methane": 0.0,
+    "toluene": 0.0,
+    "benzene": 0.0,
+    "biphenyl": 49.3582
+   },
+   "molar_flow_kmol_h": 0.3201,
+   "mass_flow_kg_h": 49.3582,
+   "temperature_C": 290.7868,
+   "pressure_bar": 2.1,
+   "vapor_fraction": 0.0,
+   "enthalpy_MMBtu_h": 0.058826
+  },
+  "23": {
+   "component_flows_kg_h": {
+    "hydrogen": 0.0,
+    "methane": 0.0,
+    "toluene": 872.9772,
+    "benzene": 0.1936,
+    "biphenyl": 0.4983
+   },
+   "molar_flow_kmol_h": 9.4801,
+   "mass_flow_kg_h": 873.6691,
+   "temperature_C": 136.5394,
+   "pressure_bar": 2.0,
+   "vapor_fraction": 0.0,
+   "enthalpy_MMBtu_h": 0.28136
+  },
+  "24": {
+   "component_flows_kg_h": {
+    "hydrogen": 0.0,
+    "methane": 0.0,
+    "toluene": 872.9772,
+    "benzene": 0.1936,
+    "biphenyl": 0.4983
+   },
+   "molar_flow_kmol_h": 9.4801,
+   "mass_flow_kg_h": 873.6691,
+   "temperature_C": 138.2894,
+   "pressure_bar": 32.0,
+   "vapor_fraction": 0.0,
+   "enthalpy_MMBtu_h": 0.28577
+  },
+  "25": {
+   "component_flows_kg_h": {
+    "hydrogen": 0.0036,
+    "methane": 0.9631,
+    "toluene": 0.0007,
+    "benzene": 1.1067,
+    "biphenyl": 0.0
+   },
+   "molar_flow_kmol_h": 0.076,
+   "mass_flow_kg_h": 2.0741,
+   "temperature_C": 50.0,
+   "pressure_bar": 2.0,
+   "vapor_fraction": 1.0,
+   "enthalpy_MMBtu_h": -0.0030692
+  }
+ }
+}

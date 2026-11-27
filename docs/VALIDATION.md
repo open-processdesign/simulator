@@ -4,9 +4,9 @@ Every engine model is checked against an independent reference. The checks run o
 request (`engine/tests`); this page lists them. Acceptance criterion (ROADMAP M3):
 |x_new − x_ref| / |x_ref| < ε, with ε per quantity below.
 
-Status: model-level validation done for the demo units. **Process-level validation (M3) is open:**
-the HDA process against the maintainer's CHEMCAD case, plus two or three literature processes
-(methanol, cumene) — see "Next".
+Status: model-level validation done for the demo units. Process-level validation (M3): the HDA
+plant against the maintainer's CHEMCAD case, and two published CHEMCAD stream tables (cumene,
+DME) — all below.
 
 ## Thermodynamics
 
@@ -37,6 +37,7 @@ the HDA process against the maintainer's CHEMCAD case, plus two or three literat
 | Geometry rating | U·A·F equals the zoned UA; design check at the rated outlet gives zero over-design | UA, over-design | 1e-5 | `test_rating_from_geometry…` |
 | Conversion reactor | ΔHr° of toluene HDA from formation enthalpies (≈ −42 kJ/mol) | duty | 2 % | `test_conversion_reactor…` |
 | Shortcut column | Closed-form binary Fenske and Underwood | N_min, R_min | 1e-9, 1e-4 rel. | `test_shortcut_column_binary…` |
+| Shortcut column options | Condenser temperature (two-phase distillate, component balances), pressure drop (bottoms at P + ΔP), absent components | balances, P | 1e-9 rel. | `test_column_options.py` |
 | Rigorous column | MESH equations on every stage; FUG design | residuals; recovery, x_D, Q_c | 1e-6; 0.03, 0.02, 5 % | `test_distillation_column.py` |
 | CSTR / PFR | First-order X = kτ/(1+kτ), X = 1 − e^(−kτ); second-order CSTR | conversion | 1e-6 rel. | `test_kinetic_reactors.py` |
 | Adiabatic PFR | Same outlet T as an adiabatic conversion reactor at equal conversion | T | 1e-3 K | `test_adiabatic_pfr…` |
@@ -85,11 +86,57 @@ pairs, so the engine treats them as ideal (warning `missing_binary_parameter`). 
 contain 39 % DME, so their phase split is off; enter literature NRTL parameters for these pairs
 on the Thermodynamics page to close it.
 
+### HDA plant — maintainer's CHEMCAD 8.1 case (SRK)
+
+Source: stream table "CHEMCAD-SON (1)" of the maintainer's KMM4125 design project (CHEMCAD 8.1.0,
+exported 2026-11-26), stored as `engine/tests/data/hda_chemcad_case.json`. Example
+`hda-chemcad-validation` rebuilds the flowsheet with CHEMCAD's stream and equipment numbers:
+feed compressor and pump, two mixers, fired heater, isothermal reactors at 620 °C (75 % toluene
+conversion; 2 % of the benzene to biphenyl), cooler, flash at 38 °C / 31.8 bar, 15 % purge,
+recycle compressor, let-down valve, flash at 2 bar, benzene column (top 2.0 bar, bottom 2.1 bar,
+condenser at 50 °C with a drum for the off-gas, stream 25) and toluene column, recycle pump.
+
+Specifications come from the stream table (T, P, conversions, purge fraction, key recoveries);
+pump and compressor efficiencies of 0.75 match CHEMCAD's enthalpies. Columns are FUG shortcuts,
+so CHEMCAD's column duties (not in the table) are not compared. Duties below are CHEMCAD stream
+enthalpy differences (heat-of-formation basis, like the engine's reactor balance). Property
+method: SRK. With PR the engine gives 0.6 % more recycle gas, 10 % more benzene in it and 25 %
+less methane dissolved in the 38 °C / 31.8 bar liquid, so the CHEMCAD case was most likely run
+with SRK. Both recycles converge
+(Wegstein, from rounded start estimates). Test: `test_hda_chemcad.py`.
+
+| Quantity | CHEMCAD | Engine | Deviation | ε |
+|---|---|---|---|---|
+| Reactor feed, Stream 6 | 421.70 kmol/h, 89.60 °C, VF 0.9181 | 421.38 kmol/h, 89.49 °C, VF 0.9181 | −0.08 %, −0.11 K | 0.5 %, 0.3 K, 0.003 |
+| Gas recycle, Stream 15 | 324.06 kmol/h | 323.75 kmol/h | −0.10 % | 0.5 % |
+| Toluene recycle, Stream 24 | 9.480 kmol/h, 138.29 °C | 9.472 kmol/h, 138.26 °C | −0.08 %, −0.03 K | 0.5 %, 0.2 K |
+| Purge (fuel gas), Stream 14 | 57.19 kmol/h | 57.13 kmol/h | −0.10 % | 0.5 % |
+| HP flash liquid, Stream 11 | 40.446 kmol/h | 40.494 kmol/h | +0.12 % | 0.5 % |
+| Let-down to 2 bar, Stream 16 | 37.43 °C, VF 0.0512 | 37.40 °C, VF 0.0531 | −0.03 K, +0.002 | 0.2 K, 0.003 |
+| Benzene product, Stream 20 | 28.493 kmol/h, x_B 0.9942 | 28.471 kmol/h, x_B 0.9942 | −0.08 % | 0.5 %, 5e-4 |
+| Biphenyl, Stream 22 | 0.320 kmol/h, 290.79 °C | 0.321 kmol/h, 290.78 °C | +0.17 % | 0.5 %, 0.2 K |
+| Column 15 bottoms, Stream 21 | 139.95 °C | 139.90 °C | −0.05 K | 0.2 K |
+| Column 16 distillate, Stream 23 | 136.54 °C | 136.50 °C | −0.04 K | 0.2 K |
+| H2 compressor outlet, Stream 2 | 654.01 °C | 652.71 °C | −1.3 K | 2 K |
+| Fired heater E-5 duty | 3818 kW | 3830 kW | +0.31 % | 1 % |
+| Reactor R-6 heat removed | 409.7 kW | 406.8 kW | −0.70 % | 1 % |
+| Cooler E-8 duty | 4060 kW | 4070 kW | +0.26 % | 1 % |
+| H2 compressor K-2 power | 312.9 kW | 312.6 kW | −0.10 % | 1 % |
+| Pumps P-1 / P-17 power | 3.64 / 1.29 kW | 3.64 / 1.29 kW | +0.15 / −0.20 % | 1 % |
+| Light ends, Stream 17 | 2.077 kmol/h | 2.158 kmol/h | +3.9 % | 6 % |
+| Column off-gas, Stream 25 | 0.076 kmol/h | 0.072 kmol/h | −5.5 % | 8 % |
+| Recycle compressor K-11 power | 2.05 kW | 1.93 kW | −5.8 % | not tested — below the table's print resolution (±0.0005 MMBtu/h ≈ ±0.15 kW) |
+
+Streams 17 and 25 carry only the H2 and CH4 dissolved in the liquid (2 and 0.08 kmol/h); they
+depend on gas solubilities, i.e. on the SRK binary parameters, which CHEMCAD and the ChemSep
+table shipped with `thermo` do not share (missing pairs are reported). Their deviations are
+recorded rather than hidden by loose tolerances on the main streams.
+
 ### HDA plant template — sanity against Turton et al., ch. 1
 
 Example `hda-benzene-plant-template` (PR; two recycles, adiabatic R-101 at 75 % per pass, FUG
 column). Its specifications are illustrative, so this is a plausibility check, not a validation;
-the CHEMCAD case of the maintainer replaces it (QUESTIONS Q8). Turton values as quoted from
+the validated HDA case is `hda-chemcad-validation` (above). Turton values as quoted from
 Table 1.5 in course material. Tested: atom balances close (1e-5) and the per-pass conversion.
 
 | Quantity | Turton (Table 1.5) | Template |
@@ -106,6 +153,6 @@ numbers as native CPython (flash-drum S2 x_benzene 0.6211 in both).
 
 ## Next (M3)
 
-1. **HDA vs. CHEMCAD.** Maintainer: export the CHEMCAD stream table (T, P, flows, compositions) and the unit specifications of the HDA design-course case. We adapt `examples/hda-benzene-plant-template.opd.json` to it, rename it `hda-validated`, and add a test with ε per quantity (QUESTIONS Q8).
+1. Done: HDA vs. the maintainer's CHEMCAD case (`hda-chemcad-validation`, above). Open: CHEMCAD's column specifications (stages, reflux) to compare a rigorous column and its duties.
 2. Done: cumene (Unit 800) and DME (Unit 200) from Turton's published CHEMCAD tables (above).
 3. Record agreed ε values here and keep them as test tolerances.

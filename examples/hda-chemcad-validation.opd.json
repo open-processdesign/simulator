@@ -1,0 +1,853 @@
+{
+ "format": "opd-flowsheet",
+ "version": "0.1",
+ "name": "HDA benzene plant — CHEMCAD-validated case",
+ "description": "Toluene hydrodealkylation with gas and toluene recycles, rebuilt from the maintainer's CHEMCAD 8.1 design case (KMM4125 design project; stream and equipment numbers as in CHEMCAD). Specifications (temperatures, pressures, 75 % toluene conversion, 2 % benzene to biphenyl, 15 % purge, column key recoveries) are read from the CHEMCAD stream table; pump efficiencies are back-calculated from its enthalpies. The columns are FUG shortcut designs with a reflux drum at 50 °C for the benzene column. The two recycle streams carry rounded start estimates. Property method SRK, which reproduces the CHEMCAD stream table best (PR was tested too). See docs/VALIDATION.md.",
+ "components": [
+  {
+   "id": "hydrogen",
+   "name": "Hydrogen",
+   "cas": "1333-74-0",
+   "formula": "H2"
+  },
+  {
+   "id": "methane",
+   "name": "Methane",
+   "cas": "74-82-8",
+   "formula": "CH4"
+  },
+  {
+   "id": "benzene",
+   "name": "Benzene",
+   "cas": "71-43-2",
+   "formula": "C6H6"
+  },
+  {
+   "id": "toluene",
+   "name": "Toluene",
+   "cas": "108-88-3",
+   "formula": "C7H8"
+  },
+  {
+   "id": "biphenyl",
+   "name": "Biphenyl",
+   "cas": "92-52-4",
+   "formula": "C12H10"
+  }
+ ],
+ "thermo": {
+  "package": "SRK"
+ },
+ "units": [
+  {
+   "id": "FEED-1",
+   "type": "feed",
+   "label": "Fresh hydrogen (stream 1)"
+  },
+  {
+   "id": "FEED-3",
+   "type": "feed",
+   "label": "Fresh toluene (stream 3)"
+  },
+  {
+   "id": "P-1",
+   "type": "pump",
+   "label": "1 · Toluene feed pump",
+   "specs": {
+    "pressure": {
+     "value": 3200000.0,
+     "unit": "Pa"
+    },
+    "efficiency": {
+     "value": 0.75,
+     "unit": "1"
+    }
+   }
+  },
+  {
+   "id": "K-2",
+   "type": "compressor",
+   "label": "2 · Hydrogen feed compressor",
+   "specs": {
+    "pressure": {
+     "value": 3200000.0,
+     "unit": "Pa"
+    },
+    "efficiency": {
+     "value": 0.75,
+     "unit": "1"
+    }
+   }
+  },
+  {
+   "id": "M-3",
+   "type": "mixer",
+   "label": "3 · Feed mixer"
+  },
+  {
+   "id": "M-4",
+   "type": "mixer",
+   "label": "4 · Reactor feed mixer (recycles)"
+  },
+  {
+   "id": "E-5",
+   "type": "heater",
+   "label": "5 · Fired heater",
+   "specs": {
+    "temperature": {
+     "value": 893.15,
+     "unit": "K"
+    },
+    "pressure": {
+     "value": 3190000.0,
+     "unit": "Pa"
+    }
+   }
+  },
+  {
+   "id": "R-6",
+   "type": "conversion_reactor",
+   "label": "6 · HDA reactor (isothermal)",
+   "specs": {
+    "temperature": {
+     "value": 893.15,
+     "unit": "K"
+    },
+    "pressure_drop": {
+     "value": 0.0,
+     "unit": "Pa"
+    }
+   },
+   "options": {
+    "reactions": [
+     {
+      "stoichiometry": {
+       "toluene": -1,
+       "hydrogen": -1,
+       "benzene": 1,
+       "methane": 1
+      },
+      "key": "toluene",
+      "conversion": 0.75
+     }
+    ]
+   }
+  },
+  {
+   "id": "R-7",
+   "type": "conversion_reactor",
+   "label": "7 · Biphenyl side reaction (isothermal)",
+   "specs": {
+    "temperature": {
+     "value": 893.15,
+     "unit": "K"
+    },
+    "pressure_drop": {
+     "value": 0.0,
+     "unit": "Pa"
+    }
+   },
+   "options": {
+    "reactions": [
+     {
+      "stoichiometry": {
+       "benzene": -2,
+       "biphenyl": 1,
+       "hydrogen": 1
+      },
+      "key": "benzene",
+      "conversion": 0.02
+     }
+    ]
+   }
+  },
+  {
+   "id": "E-8",
+   "type": "heater",
+   "label": "8 · Effluent cooler",
+   "specs": {
+    "temperature": {
+     "value": 311.15,
+     "unit": "K"
+    },
+    "pressure": {
+     "value": 3180000.0,
+     "unit": "Pa"
+    }
+   }
+  },
+  {
+   "id": "F-9",
+   "type": "flash",
+   "label": "9 · High-pressure separator",
+   "specs": {
+    "temperature": {
+     "value": 311.15,
+     "unit": "K"
+    },
+    "pressure_drop": {
+     "value": 0.0,
+     "unit": "Pa"
+    }
+   }
+  },
+  {
+   "id": "V-10",
+   "type": "valve",
+   "label": "10 · Let-down valve",
+   "specs": {
+    "pressure": {
+     "value": 200000.0,
+     "unit": "Pa"
+    }
+   }
+  },
+  {
+   "id": "K-11",
+   "type": "compressor",
+   "label": "11 · Recycle gas compressor",
+   "specs": {
+    "pressure": {
+     "value": 3200000.0,
+     "unit": "Pa"
+    },
+    "efficiency": {
+     "value": 0.75,
+     "unit": "1"
+    }
+   }
+  },
+  {
+   "id": "S-12",
+   "type": "splitter",
+   "label": "12 · Purge splitter",
+   "specs": {
+    "split_out2": {
+     "value": 0.15,
+     "unit": "1"
+    }
+   }
+  },
+  {
+   "id": "F-13",
+   "type": "flash",
+   "label": "13 · Low-pressure separator",
+   "specs": {
+    "temperature": {
+     "value": 311.15,
+     "unit": "K"
+    },
+    "pressure": {
+     "value": 200000.0,
+     "unit": "Pa"
+    }
+   }
+  },
+  {
+   "id": "V-14",
+   "type": "valve",
+   "label": "14 · Fuel gas valve",
+   "specs": {
+    "pressure": {
+     "value": 200000.0,
+     "unit": "Pa"
+    }
+   }
+  },
+  {
+   "id": "T-15",
+   "type": "shortcut_column",
+   "label": "15 · Benzene column (FUG)",
+   "specs": {
+    "lk_recovery": {
+     "value": 0.9999,
+     "unit": "1"
+    },
+    "hk_recovery": {
+     "value": 0.995,
+     "unit": "1"
+    },
+    "reflux_ratio_factor": {
+     "value": 1.3,
+     "unit": "1"
+    },
+    "pressure": {
+     "value": 200000.0,
+     "unit": "Pa"
+    },
+    "pressure_drop": {
+     "value": 10000.0,
+     "unit": "Pa"
+    },
+    "condenser_temperature": {
+     "value": 323.15,
+     "unit": "K"
+    }
+   },
+   "options": {
+    "light_key": "benzene",
+    "heavy_key": "toluene"
+   }
+  },
+  {
+   "id": "D-15",
+   "type": "flash",
+   "label": "15 · Benzene column reflux drum (partial condenser)",
+   "specs": {
+    "temperature": {
+     "value": 323.15,
+     "unit": "K"
+    },
+    "pressure": {
+     "value": 200000.0,
+     "unit": "Pa"
+    }
+   }
+  },
+  {
+   "id": "T-16",
+   "type": "shortcut_column",
+   "label": "16 · Toluene column (FUG)",
+   "specs": {
+    "lk_recovery": {
+     "value": 0.999999,
+     "unit": "1"
+    },
+    "hk_recovery": {
+     "value": 0.99,
+     "unit": "1"
+    },
+    "reflux_ratio_factor": {
+     "value": 1.3,
+     "unit": "1"
+    },
+    "pressure": {
+     "value": 200000.0,
+     "unit": "Pa"
+    },
+    "pressure_drop": {
+     "value": 10000.0,
+     "unit": "Pa"
+    }
+   },
+   "options": {
+    "light_key": "toluene",
+    "heavy_key": "biphenyl"
+   }
+  },
+  {
+   "id": "P-17",
+   "type": "pump",
+   "label": "17 · Toluene recycle pump",
+   "specs": {
+    "pressure": {
+     "value": 3200000.0,
+     "unit": "Pa"
+    },
+    "efficiency": {
+     "value": 0.75,
+     "unit": "1"
+    }
+   }
+  },
+  {
+   "id": "PROD-14",
+   "type": "product",
+   "label": "Fuel gas (stream 14)"
+  },
+  {
+   "id": "PROD-18",
+   "type": "product",
+   "label": "Fuel gas (stream 18)"
+  },
+  {
+   "id": "PROD-20",
+   "type": "product",
+   "label": "Benzene (stream 20)"
+  },
+  {
+   "id": "PROD-25",
+   "type": "product",
+   "label": "Column off-gas (stream 25)"
+  },
+  {
+   "id": "PROD-22",
+   "type": "product",
+   "label": "Biphenyl (stream 22)"
+  }
+ ],
+ "streams": [
+  {
+   "id": "S1",
+   "from": {
+    "unit": "FEED-1",
+    "port": "out"
+   },
+   "to": {
+    "unit": "K-2",
+    "port": "in"
+   },
+   "state": {
+    "temperature": {
+     "value": 298.15,
+     "unit": "K"
+    },
+    "pressure": {
+     "value": 101299.99999999999,
+     "unit": "Pa"
+    },
+    "molar_flow": {
+     "value": 16.236919225229094,
+     "unit": "mol/s"
+    },
+    "mole_fractions": {
+     "hydrogen": 0.9499580079875427,
+     "methane": 0.050041992012457306,
+     "benzene": 0.0,
+     "toluene": 0.0,
+     "biphenyl": 0.0
+    }
+   }
+  },
+  {
+   "id": "S2",
+   "from": {
+    "unit": "K-2",
+    "port": "out"
+   },
+   "to": {
+    "unit": "M-3",
+    "port": "in1"
+   }
+  },
+  {
+   "id": "S3",
+   "from": {
+    "unit": "FEED-3",
+    "port": "out"
+   },
+   "to": {
+    "unit": "P-1",
+    "port": "in"
+   },
+   "state": {
+    "temperature": {
+     "value": 298.15,
+     "unit": "K"
+    },
+    "pressure": {
+     "value": 101299.99999999999,
+     "unit": "Pa"
+    },
+    "molar_flow": {
+     "value": 8.250231614081896,
+     "unit": "mol/s"
+    },
+    "mole_fractions": {
+     "hydrogen": 0.0,
+     "methane": 0.0,
+     "benzene": 0.0,
+     "toluene": 1.0,
+     "biphenyl": 0.0
+    }
+   }
+  },
+  {
+   "id": "S4",
+   "from": {
+    "unit": "P-1",
+    "port": "out"
+   },
+   "to": {
+    "unit": "M-3",
+    "port": "in2"
+   }
+  },
+  {
+   "id": "S5",
+   "from": {
+    "unit": "M-3",
+    "port": "out"
+   },
+   "to": {
+    "unit": "M-4",
+    "port": "in1"
+   }
+  },
+  {
+   "id": "S6",
+   "from": {
+    "unit": "M-4",
+    "port": "out"
+   },
+   "to": {
+    "unit": "E-5",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S7",
+   "from": {
+    "unit": "E-5",
+    "port": "out"
+   },
+   "to": {
+    "unit": "R-6",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S8",
+   "from": {
+    "unit": "R-6",
+    "port": "out"
+   },
+   "to": {
+    "unit": "R-7",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S9",
+   "from": {
+    "unit": "R-7",
+    "port": "out"
+   },
+   "to": {
+    "unit": "E-8",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S10",
+   "from": {
+    "unit": "E-8",
+    "port": "out"
+   },
+   "to": {
+    "unit": "F-9",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S11",
+   "from": {
+    "unit": "F-9",
+    "port": "liquid"
+   },
+   "to": {
+    "unit": "V-10",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S12",
+   "from": {
+    "unit": "F-9",
+    "port": "vapor"
+   },
+   "to": {
+    "unit": "S-12",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S13",
+   "from": {
+    "unit": "S-12",
+    "port": "out1"
+   },
+   "to": {
+    "unit": "K-11",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S14",
+   "from": {
+    "unit": "S-12",
+    "port": "out2"
+   },
+   "to": {
+    "unit": "PROD-14",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S15",
+   "from": {
+    "unit": "K-11",
+    "port": "out"
+   },
+   "to": {
+    "unit": "M-4",
+    "port": "in2"
+   },
+   "state": {
+    "temperature": {
+     "value": 312,
+     "unit": "K"
+    },
+    "pressure": {
+     "value": 3200000.0,
+     "unit": "Pa"
+    },
+    "molar_flow": {
+     "value": 88.88888888888889,
+     "unit": "mol/s"
+    },
+    "mole_fractions": {
+     "hydrogen": 0.45544554455445546,
+     "methane": 0.5346534653465347,
+     "benzene": 0.009900990099009901,
+     "toluene": 0.0,
+     "biphenyl": 0.0
+    }
+   }
+  },
+  {
+   "id": "S16",
+   "from": {
+    "unit": "V-10",
+    "port": "out"
+   },
+   "to": {
+    "unit": "F-13",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S17",
+   "from": {
+    "unit": "F-13",
+    "port": "vapor"
+   },
+   "to": {
+    "unit": "V-14",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S18",
+   "from": {
+    "unit": "V-14",
+    "port": "out"
+   },
+   "to": {
+    "unit": "PROD-18",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S19",
+   "from": {
+    "unit": "F-13",
+    "port": "liquid"
+   },
+   "to": {
+    "unit": "T-15",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S15D",
+   "from": {
+    "unit": "T-15",
+    "port": "distillate"
+   },
+   "to": {
+    "unit": "D-15",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S20",
+   "from": {
+    "unit": "D-15",
+    "port": "liquid"
+   },
+   "to": {
+    "unit": "PROD-20",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S25",
+   "from": {
+    "unit": "D-15",
+    "port": "vapor"
+   },
+   "to": {
+    "unit": "PROD-25",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S21",
+   "from": {
+    "unit": "T-15",
+    "port": "bottoms"
+   },
+   "to": {
+    "unit": "T-16",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S22",
+   "from": {
+    "unit": "T-16",
+    "port": "bottoms"
+   },
+   "to": {
+    "unit": "PROD-22",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S23",
+   "from": {
+    "unit": "T-16",
+    "port": "distillate"
+   },
+   "to": {
+    "unit": "P-17",
+    "port": "in"
+   }
+  },
+  {
+   "id": "S24",
+   "from": {
+    "unit": "P-17",
+    "port": "out"
+   },
+   "to": {
+    "unit": "M-4",
+    "port": "in3"
+   },
+   "state": {
+    "temperature": {
+     "value": 411,
+     "unit": "K"
+    },
+    "pressure": {
+     "value": 3200000.0,
+     "unit": "Pa"
+    },
+    "molar_flow": {
+     "value": 2.5,
+     "unit": "mol/s"
+    },
+    "mole_fractions": {
+     "hydrogen": 0.0,
+     "methane": 0.0,
+     "benzene": 0.0,
+     "toluene": 1.0,
+     "biphenyl": 0.0
+    }
+   }
+  }
+ ],
+ "layout": {
+  "FEED-3": {
+   "x": 0,
+   "y": 40
+  },
+  "P-1": {
+   "x": 180,
+   "y": 40
+  },
+  "FEED-1": {
+   "x": 0,
+   "y": 300
+  },
+  "K-2": {
+   "x": 180,
+   "y": 300
+  },
+  "M-3": {
+   "x": 340,
+   "y": 160
+  },
+  "M-4": {
+   "x": 500,
+   "y": 160
+  },
+  "E-5": {
+   "x": 660,
+   "y": 160
+  },
+  "R-6": {
+   "x": 820,
+   "y": 160
+  },
+  "R-7": {
+   "x": 980,
+   "y": 160
+  },
+  "E-8": {
+   "x": 1140,
+   "y": 240
+  },
+  "F-9": {
+   "x": 1300,
+   "y": 240
+  },
+  "S-12": {
+   "x": 1300,
+   "y": 20
+  },
+  "K-11": {
+   "x": 900,
+   "y": 0
+  },
+  "PROD-14": {
+   "x": 1460,
+   "y": 0
+  },
+  "V-10": {
+   "x": 1460,
+   "y": 320
+  },
+  "F-13": {
+   "x": 1620,
+   "y": 320
+  },
+  "V-14": {
+   "x": 1620,
+   "y": 120
+  },
+  "PROD-18": {
+   "x": 1780,
+   "y": 100
+  },
+  "T-15": {
+   "x": 1780,
+   "y": 380
+  },
+  "D-15": {
+   "x": 1940,
+   "y": 300
+  },
+  "PROD-20": {
+   "x": 2100,
+   "y": 320
+  },
+  "PROD-25": {
+   "x": 2100,
+   "y": 220
+  },
+  "T-16": {
+   "x": 1940,
+   "y": 500
+  },
+  "PROD-22": {
+   "x": 2100,
+   "y": 560
+  },
+  "P-17": {
+   "x": 1100,
+   "y": 620
+  }
+ }
+}

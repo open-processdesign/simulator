@@ -2,6 +2,19 @@
 
 All notable changes. Versions follow [Semantic Versioning](https://semver.org/); dates are UTC.
 
+## [Unreleased]
+
+### Added
+- HDA plant validated against the maintainer's CHEMCAD 8.1 case (`hda-chemcad-validation`, SRK):
+  flows within 0.2 %, temperatures within 0.2 K (compressor outlet 1.3 K), duties within 0.7 %.
+- Shortcut column: optional condenser temperature (partial condenser with a drum for off-gas) and
+  column pressure drop.
+
+### Fixed
+- Shortcut column: no NaN when a component is absent from the feed; clear message when the
+  distillate cannot be condensed at the column pressure.
+- Compressed light gases above their pseudo-critical temperature are reported as vapour.
+
 ## [0.1.0] — 2026-11-22
 
 First public release: a general-purpose steady-state simulator in the browser, checked against

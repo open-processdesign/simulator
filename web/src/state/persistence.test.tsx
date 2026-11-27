@@ -38,7 +38,7 @@ describe("persistence helpers", () => {
 
   it("ships the example gallery", () => {
     expect(EXAMPLES.map((e) => e.file).sort()).toEqual([
-      "benzene-toluene-column.opd.json", "benzene-toluene-rigorous-column.opd.json", "cumene-unit-800-validation.opd.json", "dme-unit-200-validation.opd.json", "ethane-cracking-pfr.opd.json", "flash-drum.opd.json", "hda-benzene-plant-template.opd.json", "hda-recycle-loop.opd.json", "methanol-water-column-nrtl.opd.json", "mtbe-liquid-equilibrium.opd.json", "steam-vaporizer-zones.opd.json", "toluene-cooler-shell-and-tube.opd.json", "water-gas-shift-equilibrium.opd.json"]);
+      "benzene-toluene-column.opd.json", "benzene-toluene-rigorous-column.opd.json", "cumene-unit-800-validation.opd.json", "dme-unit-200-validation.opd.json", "ethane-cracking-pfr.opd.json", "flash-drum.opd.json", "hda-benzene-plant-template.opd.json", "hda-chemcad-validation.opd.json", "hda-recycle-loop.opd.json", "methanol-water-column-nrtl.opd.json", "mtbe-liquid-equilibrium.opd.json", "steam-vaporizer-zones.opd.json", "toluene-cooler-shell-and-tube.opd.json", "water-gas-shift-equilibrium.opd.json"]);
   });
 });
 

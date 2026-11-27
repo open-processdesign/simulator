@@ -41,6 +41,7 @@ Night sessions until the demo (Mon/Wed/Sat): 21, 23, 25, 28, 30 Nov · 2, 5, 7, 
 | T26 | **Literature validation case 2:** DME Unit 200 (Turton, CHEMCAD table). | – | done |
 | T27 | **HDA template from the literature base case** (swap to CHEMCAD numbers when available, Q8). | – | done |
 | T28 | **v0.1 release:** demo video, CHANGELOG, final docs check. | T23–T27 | done — tagged `v0.1.0` |
+| T29 | **HDA vs. maintainer's CHEMCAD case (Q8).** Rebuild the CHEMCAD flowsheet, test against its stream table; shortcut-column condenser temperature and pressure drop. | T27 | done |
 
 ## After the demo — DWSIM engine (needs a host, see D012; IDs T90+ so they never clash with new tasks)
 | ID | Task | Depends | Status |
@@ -50,5 +51,5 @@ Night sessions until the demo (Mon/Wed/Sat): 21, 23, 25, 28, 30 Nov · 2, 5, 7, 
 
 ## M2 / M3 — later (to be detailed after the demo)
 - Done in M2: rigorous column (T14), kinetic reactors (T17), equilibrium reactor (T18), HX rating (T20), unit sets, CSV export, docs (T19), UNIQUAC (T21), zoned HX (T22).
-- Validation: HDA vs. CHEMCAD (needs Berkay's CHEMCAD stream table), methanol synthesis, cumene.
+- Validation: HDA vs. CHEMCAD done (T29); cumene and DME done (T25, T26). Optional: rigorous HDA columns once the CHEMCAD column settings arrive (Q9).
 - Demo video.

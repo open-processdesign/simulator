@@ -187,3 +187,9 @@ Template:
 - Tests: engine 230 passed (new `test_hda_chemcad.py`, `test_column_options.py`); web 56 passed; all 14 examples solve in Pyodide (HDA CHEMCAD case 6.6 s).
 - PR: agent/T29-hda-chemcad.
 - Next / blockers: optional Q9 (column settings) for rigorous HDA columns; T90 DWSIM spike needs a host (D012).
+
+## 2026-11-27 — Claude (maintainer-requested session) — T30
+- Done: user guide EN/TR (shortcut-column condenser temperature and pressure drop); CHANGELOG 0.1.1; versions 0.1.1 (web, engine); merged `agent/*` branches deleted; tag `v0.1.1` after merge.
+- Tests: no engine logic changes.
+- PR: agent/T30-guide-v0.1.1.
+- Next / blockers: Q9 (CHEMCAD column settings; maintainer will send a screen recording); T90 DWSIM needs a host.

@@ -42,6 +42,7 @@ Night sessions until the demo (Mon/Wed/Sat): 21, 23, 25, 28, 30 Nov · 2, 5, 7, 
 | T27 | **HDA template from the literature base case** (swap to CHEMCAD numbers when available, Q8). | – | done |
 | T28 | **v0.1 release:** demo video, CHANGELOG, final docs check. | T23–T27 | done — tagged `v0.1.0` |
 | T29 | **HDA vs. maintainer's CHEMCAD case (Q8).** Rebuild the CHEMCAD flowsheet, test against its stream table; shortcut-column condenser temperature and pressure drop. | T27 | done |
+| T30 | **v0.1.1:** user guide for the new column options, versions, CHANGELOG, tag; delete merged `agent/*` branches. | T29 | done |
 
 ## After the demo — DWSIM engine (needs a host, see D012; IDs T90+ so they never clash with new tasks)
 | ID | Task | Depends | Status |

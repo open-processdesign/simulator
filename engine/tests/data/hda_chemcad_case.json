@@ -1,5 +1,5 @@
 {
- "source": "CHEMCAD 8.1.0 stream table 'CHEMCAD-SON (1)', maintainer's HDA design case (Berkay Hepg\u00fcls\u00fcn, Marmara University KMM4125), exported 2026-11-26. Values as printed (4\u20135 significant digits). Enthalpy basis: CHEMCAD (ideal-gas heat of formation at 25 \u00b0C).",
+ "source": "CHEMCAD 8.1.0 stream table 'CHEMCAD-SON (1)', maintainer's HDA design case (KMM4125 design project), exported 2026-11-26. Values as printed (4\u20135 significant digits). Enthalpy basis: CHEMCAD (ideal-gas heat of formation at 25 \u00b0C).",
  "units": {
   "temperature": "degC",
   "pressure": "bar",
